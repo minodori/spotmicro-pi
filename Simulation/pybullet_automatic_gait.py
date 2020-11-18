@@ -9,7 +9,7 @@ sys.path.append("..")
 
 import matplotlib.animation as animation
 import numpy as np
-import time
+import time 
 import math
 import datetime as dt
 import keyboard
@@ -19,11 +19,12 @@ from environment import environment
 import pybullet as p
 import pybullet_data
 
-import Kinematics.kinematics as kn
 import spotmicroai
 
 from multiprocessing import Process
 from Common.multiprocess_kb import KeyInterrupt
+
+import kinematics as kn
 from kinematicMotion import KinematicMotion, TrottingGait
 
 rtime=time.time()
@@ -33,28 +34,6 @@ def reset():
     global rtime
     rtime=time.time()    
 
-robot=spotmicroai.Robot(False,False,reset)
-
-# TODO: Needs refactoring
-speed1=240
-speed2=170
-speed3=300
-
-speed1=322
-speed2=237
-speed3=436
-
-spurWidth=robot.W/2+20
-stepLength=0
-stepHeight=72
-iXf=120
-iXb=-132
-IDspurWidth = p.addUserDebugParameter("spur width", 0, robot.W, spurWidth)
-IDstepHeight = p.addUserDebugParameter("step height", 0, 150, stepHeight)
-
-
-walk=False
-
 def resetPose():
     # TODO: globals are bad
     global joy_x, joy_z, joy_y, joy_rz,joy_z
@@ -62,7 +41,7 @@ def resetPose():
 
 # define our clear function 
 def consoleClear(): 
-  
+
     # for windows 
     if name == 'nt': 
         _ = system('cls') 
@@ -71,8 +50,18 @@ def consoleClear():
     else: 
         _ = system('clear') 
 
+robot=spotmicroai.Robot(False,True,reset)
+
+spurWidth=robot.W/2+20
+stepLength=0
+stepHeight=72
+iXf=120
+iXb=-132
+
+IDspurWidth = p.addUserDebugParameter("spur width", 0, robot.W, spurWidth)
+IDstepHeight = p.addUserDebugParameter("step height", 0, 150, stepHeight)
 IDheight = p.addUserDebugParameter("height", -40, 90, 20)
-# IDstepLength = p.addUserDebugParameter("step length", -150, 150, 0.0)
+IDstepLength = p.addUserDebugParameter("step length", -150, 150, 0.0)
 
 Lp = np.array([[iXf, -100, spurWidth, 1], [iXf, -100, -spurWidth, 1],
 [-50, -100, spurWidth, 1], [-50, -100, -spurWidth, 1]])
@@ -83,13 +72,15 @@ resetPose()
 trotting=TrottingGait()
 
 def main(id, command_status):
+    
     s=False
-    while True:
 
+    while True:
         bodyPos=robot.getPos()
         bodyOrn,_,_=robot.getIMU()
         xr,yr,_= p.getEulerFromQuaternion(bodyOrn)
         distance=math.sqrt(bodyPos[0]**2+bodyPos[1]**2)
+
         if distance>50:
             robot.resetBody()
     
@@ -113,7 +104,9 @@ def main(id, command_status):
         #roll=-xr
         roll=0
         robot.bodyRotation((roll,math.pi/180*((joy_x)-128)/3,-(1/256*joy_y-0.5)))
+
         bodyX=50+yr*10
+        
         robot.bodyPosition((bodyX, 40+height, -ir))
         robot.step()
         consoleClear()

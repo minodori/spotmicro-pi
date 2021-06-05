@@ -24,7 +24,7 @@ class Controllers:
         self._pca_1.frequency = 60
         self._pca_2 = PCA9685(self._i2c_bus0, address=0x41)
         self._pca_2.frequency = 60
-                self._servos = list()
+        self._servos = list()
         for i in range(0, 12):
             if i<6:
                 self._servos.append(servo.Servo(self._pca_1.channels[i], min_pulse=771, max_pulse=2740))

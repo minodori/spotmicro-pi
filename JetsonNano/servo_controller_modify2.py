@@ -24,6 +24,15 @@ class Controllers:
         self._pca_1.frequency = 60
         self._pca_2 = PCA9685(self._i2c_bus0, address=0x41)
         self._pca_2.frequency = 60
+                self._servos = list()
+        for i in range(0, 12):
+            if i<6:
+                self._servos.append(servo.Servo(self._pca_1.channels[i], min_pulse=771, max_pulse=2740))
+            else:
+                self._servos.append(servo.Servo(self._pca_2.channels[i], min_pulse=771, max_pulse=2740))
+
+        # servos.append(servo.Servo(pca[int(i/6)].channels[int(i%6)], min_pulse=460, max_pulse=2440)) CL motor
+        # servos.append(servo.Servo(pca[int(i/6)].channels[int(i%6)], min_pulse=771, max_pulse=2740)) MG996R
         print("Done initializing")
 
         #1 by 12 array

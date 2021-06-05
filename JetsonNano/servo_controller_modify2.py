@@ -127,9 +127,9 @@ class Controllers:
                     raise Exception(f"[Error] Motor {x} Under 0!!")
                     continue
                 if x < 6:
-                    self._kit.servo[x].angle = self._val_list[x]
+                    self.servos[x].angle = self._val_list[x]
                 else:
-                    self._kit2.servo[x].angle = self._val_list[x]
+                    self.servos[x].angle = self._val_list[x]
 
 
 def input_handle(controller, thetas):

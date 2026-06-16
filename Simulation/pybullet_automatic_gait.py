@@ -120,6 +120,7 @@ if __name__ == "__main__":
             KeyProcess.terminate()
 
     except Exception as e:
-        print(e)
+        import traceback
+        traceback.print_exc()
     finally:
         print("Done... :)")

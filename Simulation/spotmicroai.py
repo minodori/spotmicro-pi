@@ -3,7 +3,8 @@ SpotMicroAI Simulation
 """
 
 import sys
-sys.path.append("..")
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import pybullet_data
 import time
@@ -23,7 +24,8 @@ class RobotState(Enum):
 
 class Robot:
 
-    def __init__(self,useFixedBase=False,useStairs=True,resetFunc=None):      
+    def __init__(self,useFixedBase=False,useStairs=True,resetFunc=None):
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
         # Simulation Configuration
         self.useMaximalCoordinates = False

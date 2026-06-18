@@ -34,7 +34,7 @@
 
 ### 2.1 테스트 영상
 
-<video src="images/w02_RightLeg_Test.mp4" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/87139ac3-5f79-4c3f-84a7-af6843df7efd" controls width="100%"></video>
 
 각 서보의 동작 범위(0° → 180° → 90°) 및 정지점 확인 테스트를 수행했으며, **정상 동작을 확인**했다.
 

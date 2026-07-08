@@ -143,6 +143,33 @@ RPi 5 (Python)
 
 ---
 
+## 4.5 ROS 사용 여부 정리 (RPi 5 이식 시 참고)
+
+레포 전체를 검색한 결과, `package.xml`/`CMakeLists.txt`에 `roscpp`/`rospy` 의존성이 선언되어 있지만 **실제 코드에서 `rospy`/`roscpp` API를 사용하는 곳은 없다.** RPi 5로 옮길 때 ROS 관련 설치/설정은 신경 쓸 필요 없다는 뜻.
+
+**ROS를 사용하는 부분 (URDF/RViz 시각화 전용 골격)**
+
+| 위치 | 내용 |
+|------|------|
+| `package.xml`, `CMakeLists.txt` | catkin 패키지 `spotmicroai` 선언, 의존성만 명시된 보일러플레이트 (노드/메시지 없음) |
+| `urdf/gen_urdf.sh` | xacro → URDF 생성 |
+| `urdf/create_ros_urdf.sh` | STL 경로를 `package://spotmicroai/urdf/stl/...` 형식으로 치환 (RViz용) |
+
+→ `roslaunch` 파일이나 ROS 노드 소스(`src/`, `scripts/`)는 레포에 없음. RViz로 URDF만 띄워보는 용도.
+
+**ROS를 사용하지 않는 부분 (실제 제어/시뮬레이션/연구 코드 전부)**
+
+| 위치 | 내용 |
+|------|------|
+| `JetsonNano/` | `adafruit_servokit`으로 PCA9685 I2C 직접 제어 |
+| `Kinematics/` | numpy 기반 역기구학 |
+| `Simulation/` | PyBullet 물리 시뮬레이션 + gym 환경 |
+| `study/minho/` (work01~05) | 서보 비교, 조립, ESP32 서보 테스트, Isaac Sim/Lab RL 훈련, RPi5 포팅 |
+
+**결론:** 로봇 제어·시뮬레이션·RL 파이프라인은 전부 ROS 바깥(순수 Python/PyBullet/Isaac Lab/adafruit)에서 동작하므로, RPi 5 이식 시 ROS 설치는 불필요하다.
+
+---
+
 ## 5. Isaac Lab 강화학습 policy.pt — CUDA 없이 RPi 5에서 실행 가능한가?
 
 **결론: 가능하다.** CUDA(GPU)는 학습 단계에서만 필요하다. RPi 5에서는 CPU 추론만으로 충분하다.

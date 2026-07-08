@@ -30,6 +30,8 @@
 
 SpotMicro에서 사용하는 주요 핀은 **I2C** (PCA9685, MPU6050 연결)뿐이다.
 
+> 참고: `requirements.txt`에 `Adafruit-SSD1306`(OLED 디스플레이) 의존성과 `legacy/boot.py`의 `RobotDisplay` 참조가 남아있지만 전부 주석 처리된 죽은 코드이며, 현재 활성 코드(`spotmicroai.py`, `servo_controller.py`)에서는 사용하지 않는다. `spotmicroai.py`의 카메라/라이다 관련 변수도 PyBullet 시뮬레이션 전용 값이라 실물 배선과 무관하다.
+
 | 물리 핀 | Jetson Nano (J41) | RPi 5 | 용도 |
 |---------|-------------------|-------|------|
 | Pin 1 | 3.3V | 3.3V | PCA9685 VCC |

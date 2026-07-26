@@ -12,7 +12,7 @@ class Controllers:
     def __init__(self):
 
         print("Initializing Servos")
-        self._i2c_bus0=(busio.I2C(board.SCL_1, board.SDA_1))
+        self._i2c_bus0=(busio.I2C(board.SCL, board.SDA))
         print("Initializing ServoKit")
         self._kit = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x40)
         self._kit2 = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x41)

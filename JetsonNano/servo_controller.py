@@ -16,9 +16,16 @@ class Controllers:
         print("Initializing ServoKit")
         self._kit = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x40)
         self._kit2 = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x41)
+
+        # DS3230 / DS3235 pulse width spec: 500-2500usec
+        for ch in range(6):
+            self._kit.servo[ch].set_pulse_width_range(500, 2500)
+            self._kit2.servo[ch].set_pulse_width_range(500, 2500)
+
         print("Done initializing")
 
         # [0]~[2] : 왼쪽 앞 다리 // [3]~[5] : 오른쪽 앞 다리 // [6]~[8] : 왼쪽 뒷 다리 // [9]~[11] : 오른쪽 뒷 다리
+        # PCA9685 두 보드 모두 채널 0~5 사용 (서보 인덱스 6~11 -> kit2 채널 0~5, servoRotate()에서 %6)
         # centered position perpendicular to the ground
         self._servo_offsets = [170, 85, 90, 1, 95, 90, 172, 90, 90, 1, 90, 95]
         #self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
@@ -93,7 +100,7 @@ class Controllers:
                 if x < 6:
                     self._kit.servo[x].angle = self._val_list[x]
                 else:
-                    self._kit2.servo[x].angle = self._val_list[x]
+                    self._kit2.servo[x % 6].angle = self._val_list[x]
 
 
 if __name__=="__main__":

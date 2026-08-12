@@ -13,7 +13,7 @@ work07.md에서 RPi 5 OS 설치와 NVMe 부팅까지 완료한 뒤, 실제 로�
 
 전체 최신 배선도는 아래 이미지와 Cirkit Designer 프로젝트에서 확인할 수 있다.
 
-![전체 배선도 v1.0](images/diagram_v1.0.png)
+![전체 배선도 v1.0](images/diagram_v1.1.png)
 
 [Cirkit Designer — SpotMicro 최신 배선도](https://app.cirkitdesigner.com/project/831f0835-5052-4e85-9442-0e19f2be4248)
 

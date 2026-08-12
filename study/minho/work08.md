@@ -13,7 +13,7 @@ work07.md에서 RPi 5 OS 설치와 NVMe 부팅까지 완료한 뒤, 실제 로�
 
 전체 최신 배선도는 아래 이미지와 Cirkit Designer 프로젝트에서 확인할 수 있다.
 
-![전체 배선도 v1.0](images/diagram_v1.1.png)
+![전체 배선도 v1.1](images/diagram_v1.1.png)
 
 [Cirkit Designer — SpotMicro 최신 배선도](https://app.cirkitdesigner.com/project/831f0835-5052-4e85-9442-0e19f2be4248)
 
@@ -61,6 +61,20 @@ work07.md에서 RPi 5 OS 설치와 NVMe 부팅까지 완료한 뒤, 실제 로�
 | 12V 어댑터 → UBEC 5V/3A → RPi 5 (1단) | ✅ 정상 부팅 |
 
 **결론**: 벅 컨버터를 종속(cascade)으로 연결하면 두 컨버터의 피드백 루프가 간섭하고 소프트 스타트 지연이 누적되어 RPi 5 PMIC 부팅 요구사항을 만족 못함. 1단 구조가 필수.
+
+### 2.4 실장 사진
+
+**배면 사전 배치 (조립 전)**
+
+![전원부 사전 배치 - 배면](images/Power_PreInstall_backside.JPG)
+
+조립된 SpotMicro를 뒤집어서 배면에서 본 모습. `diagram_v1.1.png`대로 수정한 배치를 실제로 확인한 것으로, LiPo 배터리, PCA9685 2개, XL4015 2개가 배치되어 있다.
+
+**전원부 정상 동작 확인**
+
+![전원부 정상 동작 확인](images/Power_block.JPG)
+
+LiPo 배터리와 XL4015 2개, UBEC 5A를 스위치를 통해 연결하고 전원을 켠 뒤 정상 동작을 확인한 사진.
 
 ---
 
@@ -122,8 +136,10 @@ PCA9685는 보드의 **A0~A5 점퍼 패드**로 I2C 주소를 설정한다. 기�
 self._kit  = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x40)  # 앞다리
 self._kit2 = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x41)  # 뒷다리
 ```
-- 채널 0~5: `_kit` (0x40) → FL/FR 다리
-- 채널 6~11: `_kit2` (0x41) → RL/RR 다리
+- `_kit` (0x40) 채널 0~5 → FL/FR 다리
+- `_kit2` (0x41) 채널 0~5 → RL/RR 다리 (서보 인덱스 6~11을 `% 6`으로 보드 자체 채널 0~5에 매핑, [servo_controller.py:100-103](../../JetsonNano/servo_controller.py#L100-L103))
+
+전체 서보 인덱스 ↔ 채널 대응표는 [work09.md](work09.md) 참고.
 
 ### 3.5 테스트 확인
 
@@ -145,7 +161,7 @@ i2cdetect -y 1
 
 | 파일/링크 | 역할 |
 |-----------|------|
-| `study/minho/images/diagram_v1.0.png` | 최신 전체 배선도 |
+| `study/minho/images/diagram_v1.1.png` | 최신 전체 배선도 |
 | [Cirkit Designer 프로젝트](https://app.cirkitdesigner.com/project/831f0835-5052-4e85-9442-0e19f2be4248) | 온라인 배선도 편집본 |
 | `JetsonNano/servo_controller.py` | PCA9685 두 개 초기화 (`0x40`, `0x41`) |
 | `JetsonNano/examples/test_servos_cali.py` | 서보 채널별 동작 검증 |

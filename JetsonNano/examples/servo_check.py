@@ -10,6 +10,9 @@
     python3 servo_check.py raw <40|41> <ch> [angle]     보드/채널 직접 지정
     python3 servo_check.py scan                         12개 채널 순차 스윕 (실측용)
     python3 servo_check.py cal [index]                  오프셋 대화형 캘리브레이션
+    python3 servo_check.py home                         12개를 기준 자세(오프셋)로 한번에
+
+직립 자세(IK 로 무릎을 굽힌 자세)는 ../servo_controller.py 를 실행한다.
 
 인덱스는 servo_controller.py 의 _channel_map 과 동일:
     [0]~[2] FL / [3]~[5] FR / [6]~[8] RL / [9]~[11] RR
@@ -240,6 +243,22 @@ def calibrate(only=None):
     show_offsets(offsets)
 
 
+def home():
+    """12개 서보를 각자의 오프셋(기준 자세)으로 보낸다.
+
+    기준 자세는 다리를 곧게 편 수직선이다. 무릎이 약간 굽은 직립 자세는
+    IK 가 필요하므로 ../servo_controller.py 를 실행할 것.
+    """
+    print("기준 자세(다리 곧게 편 상태)로 이동한다.")
+    print("무릎이 굽은 직립 자세는 ../servo_controller.py 를 실행할 것.\n")
+    for i in range(12):
+        kit_obj, ch = CHANNEL_MAP[i]
+        kit_obj.servo[ch].angle = DEFAULT_OFFSETS[i]
+        print(f"  idx {i:>2}  {NAMES[i]:<12} -> {DEFAULT_OFFSETS[i]:>3}도")
+        time.sleep(0.15)  # 12개 동시 기동 시 돌입 전류가 몰리는 것을 피한다
+    print("\n완료.")
+
+
 def show_offsets(offsets):
     print("\n=== 실측 오프셋 ===")
     for i in range(12):
@@ -252,6 +271,10 @@ def show_offsets(offsets):
 def main():
     if len(sys.argv) < 2 or sys.argv[1] == "map":
         show_map()
+        return
+
+    if sys.argv[1] == "home":
+        home()
         return
 
     if sys.argv[1] == "cal":

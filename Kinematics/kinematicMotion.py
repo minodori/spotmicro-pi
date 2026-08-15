@@ -102,7 +102,7 @@ class TrottingGait:
         elif(t<self.t0+self.t1): # drag foot over ground
 
             td=t-self.t0
-            tp=1/(self.t1/td)
+            tp=td/self.t1   # 1/(t1/td) 와 동일하되 td==0 에서 ZeroDivisionError 가 나지 않는다
             diffLp=endLp-startLp
             curLp=startLp+diffLp*tp
             psi=-((math.pi/180*self.Sa)/2)+(math.pi/180*self.Sa)*tp
@@ -116,7 +116,7 @@ class TrottingGait:
             return endLp
         elif(t<self.t0+self.t1+self.t2+self.t3): # Lift foot
             td=t-(self.t0+self.t1+self.t2)
-            tp=1/(self.t3/td)
+            tp=td/self.t3   # 위와 동일한 이유
             diffLp=startLp-endLp
             curLp=endLp+diffLp*tp
             curLp[1]+=self.Sh*math.sin(math.pi*tp)

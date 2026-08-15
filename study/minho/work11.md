@@ -401,6 +401,56 @@ legEndpoints = np.array([[70,-120,87.5,1], [70,-120,-87.5,1],
 
 ---
 
+## 6.10 보행 궤적 사전 검증 (실물 구동 없이)
+
+§6.8 에서 드러난 "뒤로 뻗을 때 각도가 급격히 커지는" 특성은 보행에도 영향을 준다. 보행 중 서보가 범위를 벗어나면 `servoRotate()` 가 그 관절 명령을 건너뛰어 **다리 하나가 얼어붙는다** (§6.7). 땅에 서 있는 상태라면 넘어진다.
+
+실물을 움직이지 않고 계산만으로 확인했다.
+
+### 제어 체인
+
+```
+TrottingGait.positions(t, kb_offset)   발끝 궤적 4개
+  -> robot.feetPosition(Lp)
+  -> robot.step() -> kin.calcIK(Lp, rot=(0,0,0), pos=(50, 80, 0))
+  -> controller.servoRotate(angles)    offset +- theta
+```
+
+`pos=(50, 80, 0)` 는 `start_automatic_gait.py` 의 `bodyX=50`, `40+height(40)=80` 에서 온다.
+
+### 결과 — 전 구간 범위 내
+
+키보드 한 번 누를 때 `Sl±10`, `Sw±5`, `Sa±3` 씩 누적된다 ([Common/multiprocess_kb.py](../../Common/multiprocess_kb.py) 의 `X_STEP`/`Y_STEP`/`YAW_STEP`).
+
+| 입력 | 서보 min~max | 여유 |
+|------|--------------|:----:|
+| 정지 | 12.6 ~ 148.4 | 13° |
+| 전진 3회 (Sl=30) | 12.3 ~ 148.7 | 12° |
+| 복합 3회 (Sl=30, Sw=15, Sa=9) | 12.5 ~ 149.0 | 12° |
+| 복합 8회 (Sl=80, Sw=40, Sa=24) | 11.9 ~ 151.7 | 12° |
+| 정지 자세 `feetPosition(Lp)` | 32.8 ~ 128.2 | 33° |
+
+**보폭을 키워도 여유가 거의 변하지 않는다.** 자세를 결정하는 것은 보폭이 아니라 기본 발 위치(앞 `Fo=120`, 뒤 `Ro=-50`)와 몸통 오프셋 `(50, 80)` 이기 때문이다.
+
+**한계 관절은 `RR-Upper` (12.4 ~ 35.2)** — §6.8 에서 `Under 0!!` 로 걸렸던 그 관절이다. 보행 중 경고가 뜨면 여기부터 확인할 것.
+
+### 부수 발견 — `calcLeg()` 0 나누기
+
+```python
+# Kinematics/kinematicMotion.py
+tp = 1/(self.t1/td)     # td == 0 이면 ZeroDivisionError
+```
+
+`t` 가 정확히 `t0`(300ms)일 때 `td=0` 이 되어 보행 프로세스가 죽는다. 실수 시간이라 확률은 낮지만 수식을 정리하면 애초에 발생하지 않는다.
+
+```python
+tp = td/self.t1         # 수학적으로 동일, td=0 에서 0
+```
+
+`t3` 구간(발 들어올리기)에도 같은 패턴이 있어 함께 수정했다.
+
+---
+
 ## 7. 검증 도구 `servo_check.py`
 
 배선 확인용으로 작성한 헬퍼. [JetsonNano/examples/servo_check.py](../../JetsonNano/examples/servo_check.py)
@@ -440,7 +490,8 @@ $P JetsonNano/examples/servo_check.py scan 4     # 4번째 채널부터 재개
 - [x] `_servo_offsets` 실측 캘리브레이션 (§6.6)
 - [x] `servoRotate()` 이중 보정 버그 수정 (§6.7)
 - [x] `servo_controller.py` 단독 실행 → 직립 자세 확인 (§6.8, §6.9)
+- [x] 보행 궤적 사전 검증 — 전 구간 서보 범위 내 확인 (§6.10)
 - [ ] 서보 12개 동시 구동 시 UBEC 5V sag 측정 (`vcgencmd get_throttled` — CM4는 `video` 그룹 필요)
-- [ ] `start_automatic_gait.py` 보행 테스트 (sudo 실행)
+- [ ] `start_automatic_gait.py` 보행 테스트 (sudo 실행, **로봇 매단 상태로 먼저**)
 - [ ] `servo_check.py`를 레포에 편입할지 결정
 - [ ] RPi 5 격리 전원 테스트로 실제 고장 여부 확정 (§2.1)

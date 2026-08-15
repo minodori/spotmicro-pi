@@ -25,7 +25,15 @@ class Controllers:
         print("Done initializing")
 
         # [0]~[2] : 왼쪽 앞 다리 // [3]~[5] : 오른쪽 앞 다리 // [6]~[8] : 왼쪽 뒷 다리 // [9]~[11] : 오른쪽 뒷 다리
-        # PCA9685 두 보드 모두 채널 0~5 사용 (서보 인덱스 6~11 -> kit2 채널 0~5, servoRotate()에서 %6)
+        # 배터리 좌우에 놓인 물리 배치에 맞춰 PCA9685를 좌/우 다리로 분리 배선함
+        # (0x40 = 배터리 우측 보드 -> 오른쪽 다리, 0x41 = 배터리 좌측 보드 -> 왼쪽 다리)
+        # index -> (kit, 보드 채널)
+        self._channel_map = {
+            0: (self._kit2, 0), 1: (self._kit2, 1), 2: (self._kit2, 2),   # FL -> 0x41 CH0~2
+            3: (self._kit, 0),  4: (self._kit, 1),  5: (self._kit, 2),    # FR -> 0x40 CH0~2
+            6: (self._kit2, 3), 7: (self._kit2, 4), 8: (self._kit2, 5),   # RL -> 0x41 CH3~5
+            9: (self._kit, 3),  10: (self._kit, 4), 11: (self._kit, 5),   # RR -> 0x40 CH3~5
+        }
         # centered position perpendicular to the ground
         self._servo_offsets = [170, 85, 90, 1, 95, 90, 172, 90, 90, 1, 90, 95]
         #self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
@@ -97,10 +105,8 @@ class Controllers:
                     print("Under 0!!")
                     self._val_list[x] = 1
                     continue
-                if x < 6:
-                    self._kit.servo[x].angle = self._val_list[x]
-                else:
-                    self._kit2.servo[x % 6].angle = self._val_list[x]
+                kit_obj, ch = self._channel_map[x]
+                kit_obj.servo[ch].angle = self._val_list[x]
 
 
 if __name__=="__main__":

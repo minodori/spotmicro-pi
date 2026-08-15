@@ -35,64 +35,70 @@ RPi 5
 
 ---
 
-## 3. 서보 인덱스 규약
+## 3. 서보 인덱스 규칙
 
 코드([servo_controller.py:30](../../JetsonNano/servo_controller.py#L30))에서 사용하는 12개 서보 인덱스는 아래 순서로 고정되어 있다.
 
 | 인덱스 | 다리 | 관절 | 약칭 | 서보 모델 |
 |--------|------|------|------|-----------|
-| 0 | Front Left  | Lower (Knee/무릎)    | FL-Lower    | CLS6322HV |
+| 0 | Front Left  | Lower (Knee/무릎)    | FL-Lower    | DS3235 |
 | 1 | Front Left  | Upper (Thigh/허벅지) | FL-Upper    | DS3235 |
-| 2 | Front Left  | Shoulder (Hip/힙)    | FL-Shoulder | DS3235 |
-| 3 | Front Right | Lower                | FR-Lower    | CLS6322HV |
+| 2 | Front Left  | Shoulder (Hip/힙)    | FL-Shoulder | CLS6322HV |
+| 3 | Front Right | Lower                | FR-Lower    | DS3235 |
 | 4 | Front Right | Upper                | FR-Upper    | DS3235 |
-| 5 | Front Right | Shoulder             | FR-Shoulder | DS3235 |
+| 5 | Front Right | Shoulder             | FR-Shoulder | CLS6322HV |
 | 6 | Rear Left (Back Left)   | Lower    | RL-Lower    | DS3235 |
 | 7 | Rear Left               | Upper    | RL-Upper    | DS3235 |
 | 8 | Rear Left               | Shoulder | RL-Shoulder | DS3235 |
-| 9 | Rear Right (Back Right) | Lower    | RR-Lower    | DS3230 |
+| 9 | Rear Right (Back Right) | Lower    | RR-Lower    | DS3235 |
 | 10 | Rear Right             | Upper    | RR-Upper    | CLS6336HV |
-| 11 | Rear Right             | Shoulder | RR-Shoulder | DS3235 |
+| 11 | Rear Right             | Shoulder | RR-Shoulder | DS3230 |
 
 각 다리는 3자유도(3-DOF): **Shoulder(힙 회전)** → **Upper(허벅지)** → **Lower(무릎)** 순서로 관절이 이어진다.
+
+> **정정 사항**: 기존 표는 관절-모델 대응이 역순으로 기재되어 있었다 (예: idx 0~2가 CLS6322HV, DS3235, DS3235 순). 실제 조립 의도는 하중이 크게 걸리는 Lower/Upper에 DS3235를, 상대적으로 부하가 적은 Shoulder에 가장 약한 모터(CLS6322HV, RR은 DS3230)를 배치하는 것이었다. 위 표는 이를 반영해 정정함.
 
 ---
 
 ## 4. PCA9685 채널 매핑
 
-[servo_controller.py:100-103](../../JetsonNano/servo_controller.py#L100-L103)의 분기 로직:
+> **변경 사항**: 기존엔 Front/Rear 기준(0x40=앞다리, 0x41=뒷다리)으로 나눠져 있었으나, 실제 실장 구조(배터리가 세로로 중앙 배치, PCA9685 두 개가 배터리 좌/우에 배치)와 맞지 않아 배선이 보드마다 배터리를 가로질러야 했다. **Left/Right 기준**(0x40=우측 보드→오른쪽 다리, 0x41=좌측 보드→왼쪽 다리)으로 변경해 각 보드가 자기 쪽 다리만 담당하도록 재배선함. 서보 인덱스(§3)의 의미는 그대로 유지되고, 인덱스가 어느 보드/채널로 나가는지만 바뀌었다.
+
+[servo_controller.py](../../JetsonNano/servo_controller.py)의 `_channel_map`:
 
 ```python
-if x < 6:
-    self._kit.servo[x].angle = self._val_list[x]        # 0x40 앞다리
-else:
-    self._kit2.servo[x % 6].angle = self._val_list[x]   # 0x41 뒷다리
+self._channel_map = {
+    0: (self._kit2, 0), 1: (self._kit2, 1), 2: (self._kit2, 2),   # FL -> 0x41 CH0~2
+    3: (self._kit, 0),  4: (self._kit, 1),  5: (self._kit, 2),    # FR -> 0x40 CH0~2
+    6: (self._kit2, 3), 7: (self._kit2, 4), 8: (self._kit2, 5),   # RL -> 0x41 CH3~5
+    9: (self._kit, 3),  10: (self._kit, 4), 11: (self._kit, 5),   # RR -> 0x40 CH3~5
+}
 ```
 
 즉 **PCA9685 두 보드 모두 채널 0~5만 사용**하고, CH6~15는 비어있다.
 
-### 4.1 PCA9685 #1 (I2C 주소 `0x40`) — 앞다리 (Front Legs)
+### 4.1 PCA9685 #1 (I2C 주소 `0x40`) — 우측 다리 (Right Legs)
+
+| 채널 | 서보 인덱스 | 다리 위치 | 관절 | 초기 오프셋 |
+|:----:|:-----------:|-----------|------|:----------:|
+| CH0  | 3  | Front Right | Lower    | 1°   |
+| CH1  | 4  | Front Right | Upper    | 95°  |
+| CH2  | 5  | Front Right | Shoulder | 90°  |
+| CH3  | 9  | Rear Right | Lower    | 1°   |
+| CH4  | 10 | Rear Right | Upper    | 90°  |
+| CH5  | 11 | Rear Right | Shoulder | 95°  |
+| CH6~CH15 | — | (미사용) | — | — |
+
+### 4.2 PCA9685 #2 (I2C 주소 `0x41`) — 좌측 다리 (Left Legs)
 
 | 채널 | 서보 인덱스 | 다리 위치 | 관절 | 초기 오프셋 |
 |:----:|:-----------:|-----------|------|:----------:|
 | CH0  | 0  | Front Left  | Lower    | 170° |
 | CH1  | 1  | Front Left  | Upper    | 85°  |
 | CH2  | 2  | Front Left  | Shoulder | 90°  |
-| CH3  | 3  | Front Right | Lower    | 1°   |
-| CH4  | 4  | Front Right | Upper    | 95°  |
-| CH5  | 5  | Front Right | Shoulder | 90°  |
-| CH6~CH15 | — | (미사용) | — | — |
-
-### 4.2 PCA9685 #2 (I2C 주소 `0x41`) — 뒷다리 (Rear Legs)
-
-| 채널 | 서보 인덱스 | 다리 위치 | 관절 | 초기 오프셋 |
-|:----:|:-----------:|-----------|------|:----------:|
-| CH0  | 6  | Rear Left  | Lower    | 172° |
-| CH1  | 7  | Rear Left  | Upper    | 90°  |
-| CH2  | 8  | Rear Left  | Shoulder | 90°  |
-| CH3  | 9  | Rear Right | Lower    | 1°   |
-| CH4  | 10 | Rear Right | Upper    | 90°  |
-| CH5  | 11 | Rear Right | Shoulder | 95°  |
+| CH3  | 6  | Rear Left  | Lower    | 172° |
+| CH4  | 7  | Rear Left  | Upper    | 90°  |
+| CH5  | 8  | Rear Left  | Shoulder | 90°  |
 | CH6~CH15 | — | (미사용) | — | — |
 
 > **오프셋 값 출처**: [servo_controller.py:30](../../JetsonNano/servo_controller.py#L30)
@@ -179,22 +185,24 @@ python3 test_servos_cali.py
 ## 9. 요약 카드 (한 장 요약)
 
 ```
-┌───────── PCA9685 #1 (0x40) ─────────┐   ┌───────── PCA9685 #2 (0x41) ─────────┐
-│ CH0: FL-Lower    (idx 0,  offs 170)│   │ CH0: RL-Lower    (idx 6,  offs 172)│
-│ CH1: FL-Upper    (idx 1,  offs 85) │   │ CH1: RL-Upper    (idx 7,  offs 90) │
-│ CH2: FL-Shoulder (idx 2,  offs 90) │   │ CH2: RL-Shoulder (idx 8,  offs 90) │
-│ CH3: FR-Lower    (idx 3,  offs 1)  │   │ CH3: RR-Lower    (idx 9,  offs 1)  │
-│ CH4: FR-Upper    (idx 4,  offs 95) │   │ CH4: RR-Upper    (idx 10, offs 90) │
-│ CH5: FR-Shoulder (idx 5,  offs 90) │   │ CH5: RR-Shoulder (idx 11, offs 95) │
+┌────── PCA9685 #2 (0x41, 좌측) ──────┐   ┌────── PCA9685 #1 (0x40, 우측) ──────┐
+│ CH0: FL-Lower    (idx 0,  offs 170)│   │ CH0: FR-Lower    (idx 3,  offs 1)  │
+│ CH1: FL-Upper    (idx 1,  offs 85) │   │ CH1: FR-Upper    (idx 4,  offs 95) │
+│ CH2: FL-Shoulder (idx 2,  offs 90) │   │ CH2: FR-Shoulder (idx 5,  offs 90) │
+│ CH3: RL-Lower    (idx 6,  offs 172)│   │ CH3: RR-Lower    (idx 9,  offs 1)  │
+│ CH4: RL-Upper    (idx 7,  offs 90) │   │ CH4: RR-Upper    (idx 10, offs 90) │
+│ CH5: RL-Shoulder (idx 8,  offs 90) │   │ CH5: RR-Shoulder (idx 11, offs 95) │
 │ CH6~15: 미사용                      │   │ CH6~15: 미사용                      │
 └─────────────────────────────────────┘   └─────────────────────────────────────┘
        ▲                                        ▲
-       │ I2C (RPi 5 Pin 3/5)                    │ I2C 데이지 체인
+       │ I2C 데이지 체인                         │ I2C (RPi 5 Pin 3/5)
        │                                        │
        └────────────────────────────────────────┘
        V+ 7.4V ← 300W Buck (개별 배선)
        GND     ← 공통 GND
 ```
+
+> 왼쪽 다리(FL/RL)는 좌측 보드(0x41), 오른쪽 다리(FR/RR)는 우측 보드(0x40)가 담당 — 배터리를 가로지르는 배선 없이 각 보드가 자기 쪽 다리만 처리.
 
 ---
 

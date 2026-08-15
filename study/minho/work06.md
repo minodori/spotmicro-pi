@@ -22,6 +22,8 @@
 self._servo_offsets = [170, 85, 90, 1, 95, 90, 172, 90, 90, 1, 90, 95]
 ```
 
+> **주의**: 위 배열은 Jetson 시절 **다른 개체**의 값이다. 오프셋은 혼이 스플라인에 물린 위치에 따라 개체마다 달라지므로 그대로 쓰면 안 된다. 현재 CM4 빌드의 실측값과 측정 절차는 [work11.md §6.6](work11.md) 참고.
+
 | 관절 | offset 범위 | 의미 |
 |------|-------------|------|
 | **어깨 (roll/abduction)** | ≈ 90 | 다리 수직 하방 = 좌우 대칭 중립 → 90°가 실제 중립 |
@@ -78,8 +80,15 @@ thetas = kn.initIK(legEndpoints)
    | 엉덩이 (hip/upper) | 대퇴부 직하방 | 90° 근방 |
    | 무릎 (knee/lower) | **좌/우 장착 방향 확인 후** 하퇴부 직하방(다리 완전히 편 상태) | 좌: ~170°, 우: ~1° |
 
-3. 조립 후 `JetsonNano/examples/test_servos_cali.py`로 실측 조정
+3. 조립 후 실측 조정 — `JetsonNano/examples/servo_check.py cal <인덱스>`
+   (방향키로 1도씩 조정하며 기준 자세를 찾는다. 관절별 목표 자세를 화면에 띄워준다)
 4. 측정값을 `servo_controller.py`의 `_servo_offsets` 배열에 기록
+
+> **혼은 원하는 각도에 정확히 안 맞는다.** 스플라인 한 칸이 약 18° 이므로 가장 가까운 칸에 끼우고,
+> 남은 오차(최대 9°)를 오프셋으로 흡수한다. 실측 오프셋이 80~95 사이에 흩어지는 것이 정상이다.
+>
+> 다만 **한 다리만 유독 크게 벌어지면 조립 이상을 의심할 것.** 실제로 FR-Upper 가 다른 Upper(80~81)보다
+> 14° 튀었고, 원인은 서보 혼 이탈이었다 ([work11.md §6.13](work11.md)).
 
 ---
 
@@ -114,7 +123,26 @@ thetas = kn.initIK(legEndpoints)
 | 파일 | 역할 |
 |------|------|
 | `JetsonNano/servo_controller.py` | `_servo_offsets` 배열, `angleToServo()` 매핑 로직 |
+| **`JetsonNano/examples/servo_check.py`** | **조립·캘리브레이션 주력 도구** (아래 참고) |
 | `JetsonNano/servo_controller_fix.py` | 표준 기준값 (모두 90°/1°/180°) |
 | `JetsonNano/examples/test_servos_cali.py` | 서보별 각도 수동 조정 (1도 단위 스위프) |
 | `JetsonNano/examples/test_servos_offset.py` | 오프셋 테스트 (기준: 90°) |
 | `Kinematics/kinematics.py` | IK 계산 (`legIK`, `initIK`) |
+
+### `servo_check.py` — 조립 시 자주 쓰는 명령
+
+```bash
+cd ~/Projects/SpotMicroJetson
+
+# 혼 결합 전, 해당 서보를 90도(전기적 중립)로
+python JetsonNano/examples/servo_check.py 4 90
+python JetsonNano/examples/servo_check.py raw 40 14 90   # 배선 전이면 보드/채널 직접 지정
+
+python JetsonNano/examples/servo_check.py map      # 인덱스 -> 보드/채널 표
+python JetsonNano/examples/servo_check.py home     # 12개를 기준 자세로 한번에
+python JetsonNano/examples/servo_check.py cal 4    # 관절 하나 대화형 캘리브레이션
+python JetsonNano/examples/servo_check.py scan     # 12채널 순차 스윕 (배선 실측)
+```
+
+조립 직후 좌우 대칭을 볼 때는 `home` 자세가 유리하다. 다리가 완전히 펴진 수직 직선이라
+어긋남이 바로 드러난다 (직립 자세는 무릎이 굽어 판정이 어렵다).

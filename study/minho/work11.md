@@ -451,6 +451,57 @@ tp = td/self.t1         # 수학적으로 동일, td=0 에서 0
 
 ---
 
+## 6.11 보행 테스트 — SSH 에서 키 입력이 전달되지 않는 문제
+
+`start_automatic_gait.py` 를 실행하면 **에러 없이 돌지만 키를 눌러도 반응이 없었다.** 정지 자세만 계속 유지했다.
+
+### 원인
+
+`keyboard` 라이브러리의 문제가 두 겹으로 겹쳐 있었다.
+
+1. **`import` 은 통과하지만 첫 호출에서 root 를 요구한다.**
+   ```
+   keyboard.is_pressed("w")
+     -> ImportError: You must be root to use this library on linux.
+   ```
+   이 예외가 키 입력 담당 자식 프로세스를 죽이고, 메인 루프는 초기값(전부 0)만 계속 읽는다.
+
+2. **sudo 로 실행해도 SSH 키 입력은 전달되지 않는다.** 이 라이브러리는 `/dev/input` 의 물리 키보드 장치를 직접 읽는다. SSH 의 키 입력은 pty 를 통해 오므로 도달하지 않는다. CM4 에는 물리 키보드도 연결되어 있지 않았다 (`/proc/bus/input/devices` 에 키보드 없음).
+
+에러가 보이지 않았던 것은 **`consoleClear()` 가 매 루프마다 화면을 지우기** 때문이다.
+
+> 이때 서보 출력값은 §6.10 의 정지 자세 예측과 거의 정확히 일치했다.
+> 예측 `[74.4, 118.8, 76.6, 76.6, 57.2, 107.4, 91.1, 128.2, 84.4, 73.9, 32.8, 78.6]`
+> 실측 `[75, 118, 77, 76, 58, 107, 92, 128, 84, 73, 33, ...]`
+> 즉 제어 체인은 정상이었고 입력만 막혀 있었다.
+
+### 해결 — stdin 입력 경로 추가
+
+`Common/multiprocess_kb.py` 에 stdin 기반 입력을 넣고, `keyboardAvailable()` 로 **자동 선택**하도록 했다. 물리 키보드가 있으면 기존 방식, 없으면 stdin 을 쓴다. sudo 도 불필요해졌다.
+
+**설계상 주의점 두 가지**
+
+- **자식 프로세스는 stdin 을 읽을 수 없다.** `multiprocessing` 이 자식의 stdin 을 `/dev/null` 로 닫는다 (`multiprocessing.util._close_stdin`). 따라서 stdin 경로는 별도 프로세스가 아니라 **메인 루프에서 `pollStdin()` 으로 폴링**한다.
+- **EOF 무한 루프.** stdin 이 닫히면 `select` 는 계속 readable 을 반환하고 `read(1)` 은 `''` 를 돌려주므로 루프가 빠져나오지 못한다. 파이프 실행이나 터미널 단절 시 CPU 를 100% 먹으며 매달린다. `ch == ''` 에서 `break` 하도록 처리.
+
+터미널은 `tty.setcbreak()` 로 두어 Enter 없이 키를 받고, 종료 시 `termios.tcsetattr` 로 복구한다.
+
+### 결과
+
+```bash
+cd ~/Projects/SpotMicroJetson/JetsonNano
+python start_automatic_gait.py          # sudo 불필요
+```
+```
+입력: stdin (이 터미널에서 w/a/s/d/q/e, space=정지, Ctrl-C 종료)
+```
+
+→ 매단 상태에서 보행 정상 동작 확인.
+
+> `consoleClear()` 가 매 루프 화면을 지우므로 로그를 남기려면 `2>&1 | tee ~/gait.log` 로 실행할 것.
+
+---
+
 ## 7. 검증 도구 `servo_check.py`
 
 배선 확인용으로 작성한 헬퍼. [JetsonNano/examples/servo_check.py](../../JetsonNano/examples/servo_check.py)
@@ -491,7 +542,9 @@ $P JetsonNano/examples/servo_check.py scan 4     # 4번째 채널부터 재개
 - [x] `servoRotate()` 이중 보정 버그 수정 (§6.7)
 - [x] `servo_controller.py` 단독 실행 → 직립 자세 확인 (§6.8, §6.9)
 - [x] 보행 궤적 사전 검증 — 전 구간 서보 범위 내 확인 (§6.10)
+- [x] `start_automatic_gait.py` 보행 테스트 — 매단 상태에서 정상 동작 (§6.11)
 - [ ] 서보 12개 동시 구동 시 UBEC 5V sag 측정 (`vcgencmd get_throttled` — CM4는 `video` 그룹 필요)
-- [ ] `start_automatic_gait.py` 보행 테스트 (sudo 실행, **로봇 매단 상태로 먼저**)
+- [ ] 지면 접지 상태 보행 테스트
+- [ ] 배터리 지속시간 실측
 - [ ] `servo_check.py`를 레포에 편입할지 결정
 - [ ] RPi 5 격리 전원 테스트로 실제 고장 여부 확정 (§2.1)

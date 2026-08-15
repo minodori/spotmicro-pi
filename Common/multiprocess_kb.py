@@ -4,9 +4,28 @@ You can get Keyboard inputs while running
 another endless Loops 
 '''
 
+import select
+import sys
+import termios
 import time
+import tty
+
 import keyboard
 from multiprocessing import Process, Queue
+
+
+def keyboardAvailable():
+    """keyboard 라이브러리를 실제로 쓸 수 있는지 확인한다.
+
+    import 는 통과하지만 첫 호출에서 root 권한을 요구하며 실패한다.
+    또한 이 라이브러리는 /dev/input 의 물리 키보드를 직접 읽으므로
+    SSH 세션의 키 입력은 sudo 로 실행해도 전달되지 않는다.
+    """
+    try:
+        keyboard.is_pressed('w')
+        return True
+    except Exception:
+        return False
 
 
 # keyboard Initialisation
@@ -58,7 +77,35 @@ class KeyInterrupt():
         self.key_status.put(result_dict)
         self.command_status.put(command_dict)
 
-    # Activated when Key Pressed, Doesn't support Hotkey 
+    # --- stdin 입력 (SSH 등 keyboard 라이브러리를 못 쓰는 환경) ---------------
+    # multiprocessing 자식 프로세스는 stdin 이 /dev/null 로 닫히므로
+    # (multiprocessing.util._close_stdin), 이 경로는 메인 프로세스에서 폴링한다.
+
+    def beginStdin(self):
+        """터미널을 cbreak 로 바꿔 Enter 없이 키를 읽는다. 원래 설정을 반환."""
+        if not sys.stdin.isatty():
+            return None
+        old = termios.tcgetattr(sys.stdin.fileno())
+        tty.setcbreak(sys.stdin.fileno())
+        return old
+
+    def endStdin(self, old):
+        if old is not None:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old)
+
+    def pollStdin(self):
+        """논블로킹으로 stdin 을 읽어 키 카운트를 갱신한다. 매 루프에서 호출."""
+        while select.select([sys.stdin], [], [], 0)[0]:
+            ch = sys.stdin.read(1)
+            if ch == '':        # EOF - 안 그러면 select 가 계속 readable 을 반환해 무한 루프
+                break
+            if ch in ('w', 'a', 's', 'd', 'q', 'e'):
+                self.keyCounter(ch)
+            elif ch == ' ':
+                self.resetStatus()
+        self.calcRbStep()
+
+    # Activated when Key Pressed, Doesn't support Hotkey
     # Doesn't support more than two key pressing
     def keyInterrupt(self, id, key_status, command_status):
         

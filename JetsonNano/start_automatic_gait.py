@@ -19,7 +19,7 @@ import spotmicroai
 import servo_controller
 
 from multiprocessing import Process
-from Common.multiprocess_kb import KeyInterrupt
+from Common.multiprocess_kb import KeyInterrupt, keyboardAvailable
 from Kinematics.kinematicMotion import KinematicMotion, TrottingGait
 
 rtime=time.time()
@@ -75,9 +75,13 @@ resetPose()
 
 trotting=TrottingGait()
 
-def main(id, command_status):
+def main(id, command_status, keyInputs=None):
     jointAngles = []
     while True:
+        # stdin 모드에서는 별도 프로세스가 없으므로 여기서 키를 읽는다
+        if keyInputs is not None:
+            keyInputs.pollStdin()
+
         xr = 0.0
         yr = 0.0
 
@@ -127,19 +131,30 @@ def main(id, command_status):
 
 
 if __name__ == "__main__":
+    KeyProcess = None
+    savedTerm = None
+    KeyInputs = KeyInterrupt()
     try:
-        # Keyboard input Process
-        KeyInputs = KeyInterrupt()
-        KeyProcess = Process(target=KeyInputs.keyInterrupt, args=(1, KeyInputs.key_status, KeyInputs.command_status))
-        KeyProcess.start()
+        # keyboard 라이브러리는 root 권한과 /dev/input 의 물리 키보드를 요구한다.
+        # SSH 로 접속한 경우엔 sudo 로 실행해도 키가 전달되지 않으므로 stdin 을 쓴다.
+        if keyboardAvailable():
+            print("입력: 물리 키보드 (keyboard 라이브러리)")
+            KeyProcess = Process(target=KeyInputs.keyInterrupt, args=(1, KeyInputs.key_status, KeyInputs.command_status))
+            KeyProcess.start()
+            main(2, KeyInputs.command_status)
+        else:
+            print("입력: stdin (이 터미널에서 w/a/s/d/q/e, space=정지, Ctrl-C 종료)")
+            time.sleep(1.5)
+            savedTerm = KeyInputs.beginStdin()
+            main(2, KeyInputs.command_status, KeyInputs)
 
-        # Main Process 
-        main(2, KeyInputs.command_status)
-        
         print("terminate KeyBoard Input process")
-        if KeyProcess.is_alive():
-            KeyProcess.terminate()
+    except KeyboardInterrupt:
+        print("중단")
     except Exception as e:
         print(e)
     finally:
+        KeyInputs.endStdin(savedTerm)
+        if KeyProcess is not None and KeyProcess.is_alive():
+            KeyProcess.terminate()
         print("Done... :)")

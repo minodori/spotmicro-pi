@@ -114,11 +114,19 @@ cd ~/SpotMicroJetson
 python3 -m venv .venv
 source .venv/bin/activate
 
-pip install numpy adafruit-blinka adafruit-circuitpython-servokit psutil
+pip install numpy adafruit-blinka adafruit-circuitpython-servokit psutil keyboard
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
-**`JetsonNano/requirements.txt`를 그대로 쓰지 않는 이유:** `numpy==1.13.3`, `Adafruit-PCA9685==1.0.1` 등 2018년 Jetson Python 환경 기준 고정 버전이라 Python 3.12(Ubuntu 24.04 기본) 환경에서 빌드 실패 가능성이 높음. `Adafruit-SSD1306`, `keyboard`, `getch`는 work05.md에서 확인된 죽은 코드 의존성이라 설치 자체가 불필요.
+**`JetsonNano/requirements.txt`를 그대로 쓰지 않는 이유:** `numpy==1.13.3`, `Adafruit-PCA9685==1.0.1` 등 2018년 Jetson Python 환경 기준 고정 버전이라 Python 3.12(Ubuntu 24.04 기본) 환경에서 빌드 실패 가능성이 높음. `Adafruit-SSD1306`은 work05.md에서 확인된 죽은 코드 의존성이라 설치 불필요.
+
+> **정정 (2026-08-15)**: 초기 작성 시 `keyboard`도 죽은 의존성으로 분류했으나, 실제로는 [Common/multiprocess_kb.py:68](../../Common/multiprocess_kb.py#L68)의 `keyboard.is_pressed()`가 보행 제어의 키 입력을 담당하는 **활성 의존성**이다. 보행 테스트(`start_automatic_gait.py`)에 반드시 필요.
+>
+> 다만 Linux에서 `keyboard` 패키지는 `/dev/input` 접근 때문에 **root 권한이 필요**하다 (import 시점에 실패). 따라서 보행 스크립트는 sudo로 실행해야 하며, venv를 쓰는 경우 venv의 python을 절대경로로 지정해야 한다:
+> ```bash
+> sudo ~/SpotMicroJetson/.venv/bin/python start_automatic_gait.py
+> ```
+> `getch`는 활성 코드에서 사용처가 없어 여전히 불필요.
 
 ---
 

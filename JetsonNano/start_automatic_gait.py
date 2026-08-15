@@ -12,7 +12,6 @@ import numpy as np
 import time
 import math
 import datetime as dt
-import keyboard
 import random
 
 import Kinematics.kinematics as kn

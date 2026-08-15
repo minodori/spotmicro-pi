@@ -2,10 +2,7 @@ from adafruit_servokit import ServoKit
 import board
 import busio
 
-# On the Jetson Nano
-# Bus 0 (pins 28,27) is board SCL_1, SDA_1 in the jetson board definition file
-# Bus 1 (pins 5, 3) is board SCL, SDA in the jetson definition file
-# Default is to Bus 1; We are using Bus 0, so we need to construct the busio first ...
+# RPi 5 / CM4: I2C1 (pins 3, 5) is board SDA, SCL
 print("Initializing Servos")
 i2c_bus0=(busio.I2C(board.SCL, board.SDA))
 print("Initializing ServoKit")
@@ -18,11 +15,17 @@ for ch in range(6):
     kit.servo[ch].set_pulse_width_range(500, 2500)
     kit2.servo[ch].set_pulse_width_range(500, 2500)
 
-# kit[0] is the front servos
-# kit[1] is the rear servos
+# kit  (0x40) drives the right legs, kit2 (0x41) drives the left legs
 print("Done initializing")
 
 # [0]~[2] : FL // [3]~[5] : FR // [6]~[8] : RL // [9]~[11] : RR
+# Must stay in sync with _channel_map in ../servo_controller.py
+channel_map = {
+    0: (kit2, 0), 1: (kit2, 1), 2: (kit2, 2),   # FL -> 0x41 CH0~2
+    3: (kit, 0),  4: (kit, 1),  5: (kit, 2),    # FR -> 0x40 CH0~2
+    6: (kit2, 3), 7: (kit2, 4), 8: (kit2, 5),   # RL -> 0x41 CH3~5
+    9: (kit, 3),  10: (kit, 4), 11: (kit, 5),   # RR -> 0x40 CH3~5
+}
 
 if __name__ == '__main__':
 
@@ -33,7 +36,5 @@ if __name__ == '__main__':
         # new angle to be written on selected motor
         cur_angle=int(input("Enter new angles (0-180): "))
 
-        if motro_num < 6:
-            kit.servo[int(motro_num % 6)].angle = cur_angle
-        else:
-            kit2.servo[int(motro_num % 6)].angle = cur_angle
+        kit_obj, ch = channel_map[motro_num]
+        kit_obj.servo[ch].angle = cur_angle

@@ -116,7 +116,11 @@ class Controllers:
 
 
 if __name__=="__main__":
-    legEndpoints=np.array([[100,-100,87.5,1],[100,-100,-87.5,1],[-100,-100,87.5,1],[-100,-100,-87.5,1]])
+    # 발끝을 엉덩관절 바로 아래(x=+-L/2=70), 몸통 높이 120mm, 폭은 shoulder theta=0 이 되는 87.5.
+    # 기존 x=+-100 은 앞발을 관절보다 30mm 앞, 뒷발을 30mm 뒤로 뻗는 자세였다.
+    # 다리 기구가 앞뒤 대칭이 아니라 뒤로 뻗는 쪽이 훨씬 큰 회전을 요구하고
+    # (upper: 앞 -44도 vs 뒤 -85도), 그 결과 RR-Upper 가 범위를 벗어났다.
+    legEndpoints=np.array([[70,-120,87.5,1],[70,-120,-87.5,1],[-70,-120,87.5,1],[-70,-120,-87.5,1]])
     thetas = kn.initIK(legEndpoints) #radians
     
     controller = Controllers()

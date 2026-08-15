@@ -10,22 +10,22 @@ print("Initializing ServoKit")
 kit = ServoKit(channels=16, i2c=i2c_bus0, address=0x40)
 kit2 = ServoKit(channels=16, i2c=i2c_bus0, address=0x41)
 
-# DS3230 / DS3235 pulse width spec: 500-2500usec
-for ch in range(6):
-    kit.servo[ch].set_pulse_width_range(500, 2500)
-    kit2.servo[ch].set_pulse_width_range(500, 2500)
-
 # kit  (0x40) drives the right legs, kit2 (0x41) drives the left legs
-print("Done initializing")
-
 # [0]~[2] : FL // [3]~[5] : FR // [6]~[8] : RL // [9]~[11] : RR
 # Must stay in sync with _channel_map in ../servo_controller.py
+# 우측 보드(0x40)는 반전 장착이라 CH15 가 앞쪽이다. 배선이 짧아지는 헤더를 고른 결과.
 channel_map = {
-    0: (kit2, 0), 1: (kit2, 1), 2: (kit2, 2),   # FL -> 0x41 CH0~2
-    3: (kit, 0),  4: (kit, 1),  5: (kit, 2),    # FR -> 0x40 CH0~2
-    6: (kit2, 3), 7: (kit2, 4), 8: (kit2, 5),   # RL -> 0x41 CH3~5
-    9: (kit, 3),  10: (kit, 4), 11: (kit, 5),   # RR -> 0x40 CH3~5
+    0: (kit2, 0),  1: (kit2, 1),  2: (kit2, 2),    # FL -> 0x41 CH0~2
+    3: (kit, 13),  4: (kit, 14),  5: (kit, 15),    # FR -> 0x40 CH13~15
+    6: (kit2, 13), 7: (kit2, 14), 8: (kit2, 15),   # RL -> 0x41 CH13~15
+    9: (kit, 0),   10: (kit, 1),  11: (kit, 2),    # RR -> 0x40 CH0~2
 }
+
+# DS3230 / DS3235 pulse width spec: 500-2500usec
+for kit_obj, ch in channel_map.values():
+    kit_obj.servo[ch].set_pulse_width_range(500, 2500)
+
+print("Done initializing")
 
 if __name__ == '__main__':
 

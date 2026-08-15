@@ -68,26 +68,34 @@ RPi 5
 
 ```python
 self._channel_map = {
-    0: (self._kit2, 0), 1: (self._kit2, 1), 2: (self._kit2, 2),   # FL -> 0x41 CH0~2
-    3: (self._kit, 0),  4: (self._kit, 1),  5: (self._kit, 2),    # FR -> 0x40 CH0~2
-    6: (self._kit2, 3), 7: (self._kit2, 4), 8: (self._kit2, 5),   # RL -> 0x41 CH3~5
-    9: (self._kit, 3),  10: (self._kit, 4), 11: (self._kit, 5),   # RR -> 0x40 CH3~5
+    0: (self._kit2, 0),  1: (self._kit2, 1),  2: (self._kit2, 2),   # FL -> 0x41 CH0~2   (좌측 앞단)
+    3: (self._kit, 13),  4: (self._kit, 14),  5: (self._kit, 15),   # FR -> 0x40 CH13~15 (우측 반전 -> 끝단이 앞쪽)
+    6: (self._kit2, 13), 7: (self._kit2, 14), 8: (self._kit2, 15),  # RL -> 0x41 CH13~15 (좌측 끝단)
+    9: (self._kit, 0),   10: (self._kit, 1),  11: (self._kit, 2),   # RR -> 0x40 CH0~2   (우측 반전 -> 앞단이 뒤쪽)
 }
 ```
 
-즉 **PCA9685 두 보드 모두 채널 0~5만 사용**하고, CH6~15는 비어있다.
+즉 두 보드 모두 **CH0~2 + CH13~15** 만 쓰고 CH3~12는 비어있다. 다만 **어느 블록이 앞다리인지는 보드마다 다르다.**
 
-### 4.1 PCA9685 #1 (I2C 주소 `0x40`) — 우측 다리 (Right Legs)
+> **채널 선택 기준은 배선 길이다.** 각 보드에서 그 다리에 물리적으로 가까운 헤더를 쓴다.
+> - **좌측 보드(0x41)**: CH0 이 앞쪽 → 앞다리 CH0~2, 뒷다리 CH13~15
+> - **우측 보드(0x40)**: **반전 장착**이라 CH15 가 앞쪽 → 앞다리 CH13~15, 뒷다리 CH0~2
+>
+> PCA9685의 16개 채널은 전기적으로 완전히 동일하므로, 배선이 짧아지는 쪽으로 꽂고 코드를 거기에 맞추면 된다.
+>
+> ⚠️ **펄스 폭 설정 주의**: `set_pulse_width_range(500, 2500)`을 `range(6)`으로 돌리면 CH13~15가 기본값(750~2250µs)으로 남아 **같은 각도 명령에 다리마다 다르게 움직인다.** 반드시 `_channel_map`에 등록된 채널 전부에 적용할 것.
+
+### 4.1 PCA9685 #1 (I2C 주소 `0x40`) — 우측 다리 (Right Legs, 반전 장착)
 
 | 채널 | 서보 인덱스 | 다리 위치 | 관절 | 초기 오프셋 |
 |:----:|:-----------:|-----------|------|:----------:|
-| CH0  | 3  | Front Right | Lower    | 1°   |
-| CH1  | 4  | Front Right | Upper    | 95°  |
-| CH2  | 5  | Front Right | Shoulder | 90°  |
-| CH3  | 9  | Rear Right | Lower    | 1°   |
-| CH4  | 10 | Rear Right | Upper    | 90°  |
-| CH5  | 11 | Rear Right | Shoulder | 95°  |
-| CH6~CH15 | — | (미사용) | — | — |
+| CH13 | 3  | Front Right | Lower    | 1°   |
+| CH14 | 4  | Front Right | Upper    | 95°  |
+| CH15 | 5  | Front Right | Shoulder | 90°  |
+| CH0  | 9  | Rear Right | Lower    | 1°   |
+| CH1  | 10 | Rear Right | Upper    | 90°  |
+| CH2  | 11 | Rear Right | Shoulder | 95°  |
+| CH3~CH12 | — | (미사용) | — | — |
 
 ### 4.2 PCA9685 #2 (I2C 주소 `0x41`) — 좌측 다리 (Left Legs)
 
@@ -96,10 +104,10 @@ self._channel_map = {
 | CH0  | 0  | Front Left  | Lower    | 170° |
 | CH1  | 1  | Front Left  | Upper    | 85°  |
 | CH2  | 2  | Front Left  | Shoulder | 90°  |
-| CH3  | 6  | Rear Left  | Lower    | 172° |
-| CH4  | 7  | Rear Left  | Upper    | 90°  |
-| CH5  | 8  | Rear Left  | Shoulder | 90°  |
-| CH6~CH15 | — | (미사용) | — | — |
+| CH13 | 6  | Rear Left  | Lower    | 172° |
+| CH14 | 7  | Rear Left  | Upper    | 90°  |
+| CH15 | 8  | Rear Left  | Shoulder | 90°  |
+| CH3~CH12 | — | (미사용) | — | — |
 
 > **오프셋 값 출처**: [servo_controller.py:30](../../JetsonNano/servo_controller.py#L30)
 > ```python
@@ -185,15 +193,17 @@ python3 test_servos_cali.py
 ## 9. 요약 카드 (한 장 요약)
 
 ```
-┌────── PCA9685 #2 (0x41, 좌측) ──────┐   ┌────── PCA9685 #1 (0x40, 우측) ──────┐
-│ CH0: FL-Lower    (idx 0,  offs 170)│   │ CH0: FR-Lower    (idx 3,  offs 1)  │
-│ CH1: FL-Upper    (idx 1,  offs 85) │   │ CH1: FR-Upper    (idx 4,  offs 95) │
-│ CH2: FL-Shoulder (idx 2,  offs 90) │   │ CH2: FR-Shoulder (idx 5,  offs 90) │
-│ CH3: RL-Lower    (idx 6,  offs 172)│   │ CH3: RR-Lower    (idx 9,  offs 1)  │
-│ CH4: RL-Upper    (idx 7,  offs 90) │   │ CH4: RR-Upper    (idx 10, offs 90) │
-│ CH5: RL-Shoulder (idx 8,  offs 90) │   │ CH5: RR-Shoulder (idx 11, offs 95) │
-│ CH6~15: 미사용                      │   │ CH6~15: 미사용                      │
+     로봇 앞쪽 ↑                              로봇 앞쪽 ↑
+┌────── PCA9685 #2 (0x41, 좌측) ──────┐   ┌─── PCA9685 #1 (0x40, 우측/반전) ────┐
+│ CH0 : FL-Lower    (idx 0,  offs 170)│   │ CH13: FR-Lower    (idx 3,  offs 1)  │
+│ CH1 : FL-Upper    (idx 1,  offs 85) │   │ CH14: FR-Upper    (idx 4,  offs 95) │
+│ CH2 : FL-Shoulder (idx 2,  offs 90) │   │ CH15: FR-Shoulder (idx 5,  offs 90) │
+│ CH13: RL-Lower    (idx 6,  offs 172)│   │ CH0 : RR-Lower    (idx 9,  offs 1)  │
+│ CH14: RL-Upper    (idx 7,  offs 90) │   │ CH1 : RR-Upper    (idx 10, offs 90) │
+│ CH15: RL-Shoulder (idx 8,  offs 90) │   │ CH2 : RR-Shoulder (idx 11, offs 95) │
+│ CH3~12: 미사용                       │   │ CH3~12: 미사용                       │
 └─────────────────────────────────────┘   └─────────────────────────────────────┘
+   CH0 이 앞쪽                                CH15 가 앞쪽 (보드 반전 장착)
        ▲                                        ▲
        │ I2C 데이지 체인                         │ I2C (RPi 5 Pin 3/5)
        │                                        │

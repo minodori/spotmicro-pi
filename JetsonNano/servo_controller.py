@@ -17,23 +17,26 @@ class Controllers:
         self._kit = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x40)
         self._kit2 = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x41)
 
-        # DS3230 / DS3235 pulse width spec: 500-2500usec
-        for ch in range(6):
-            self._kit.servo[ch].set_pulse_width_range(500, 2500)
-            self._kit2.servo[ch].set_pulse_width_range(500, 2500)
-
-        print("Done initializing")
-
         # [0]~[2] : 왼쪽 앞 다리 // [3]~[5] : 오른쪽 앞 다리 // [6]~[8] : 왼쪽 뒷 다리 // [9]~[11] : 오른쪽 뒷 다리
         # 배터리 좌우에 놓인 물리 배치에 맞춰 PCA9685를 좌/우 다리로 분리 배선함
         # (0x40 = 배터리 우측 보드 -> 오른쪽 다리, 0x41 = 배터리 좌측 보드 -> 왼쪽 다리)
+        # 채널은 배선이 짧아지는 쪽으로 고른다. 각 보드에서 물리적으로 가까운 헤더에 그 다리를 문다.
+        # 좌측 보드(0x41)는 CH0 이 앞쪽, 우측 보드(0x40)는 반전 장착이라 CH15 가 앞쪽이다.
         # index -> (kit, 보드 채널)
         self._channel_map = {
-            0: (self._kit2, 0), 1: (self._kit2, 1), 2: (self._kit2, 2),   # FL -> 0x41 CH0~2
-            3: (self._kit, 0),  4: (self._kit, 1),  5: (self._kit, 2),    # FR -> 0x40 CH0~2
-            6: (self._kit2, 3), 7: (self._kit2, 4), 8: (self._kit2, 5),   # RL -> 0x41 CH3~5
-            9: (self._kit, 3),  10: (self._kit, 4), 11: (self._kit, 5),   # RR -> 0x40 CH3~5
+            0: (self._kit2, 0),  1: (self._kit2, 1),  2: (self._kit2, 2),   # FL -> 0x41 CH0~2   (좌측 앞단)
+            3: (self._kit, 13),  4: (self._kit, 14),  5: (self._kit, 15),   # FR -> 0x40 CH13~15 (우측 반전 -> 끝단이 앞쪽)
+            6: (self._kit2, 13), 7: (self._kit2, 14), 8: (self._kit2, 15),  # RL -> 0x41 CH13~15 (좌측 끝단)
+            9: (self._kit, 0),   10: (self._kit, 1),  11: (self._kit, 2),   # RR -> 0x40 CH0~2   (우측 반전 -> 앞단이 뒤쪽)
         }
+
+        # DS3230 / DS3235 pulse width spec: 500-2500usec
+        # 기본값(750-2250)으로 남는 채널이 없도록 실제 사용하는 채널 전부에 적용한다.
+        for kit_obj, ch in self._channel_map.values():
+            kit_obj.servo[ch].set_pulse_width_range(500, 2500)
+
+        print("Done initializing")
+
         # centered position perpendicular to the ground
         self._servo_offsets = [170, 85, 90, 1, 95, 90, 172, 90, 90, 1, 90, 95]
         #self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]

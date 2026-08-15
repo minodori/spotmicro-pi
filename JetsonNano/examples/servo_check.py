@@ -9,6 +9,7 @@
     python3 servo_check.py map                          인덱스 -> 보드/채널 표
     python3 servo_check.py raw <40|41> <ch> [angle]     보드/채널 직접 지정
     python3 servo_check.py scan                         12개 채널 순차 스윕 (실측용)
+    python3 servo_check.py cal [index]                  오프셋 대화형 캘리브레이션
 
 인덱스는 servo_controller.py 의 _channel_map 과 동일:
     [0]~[2] FL / [3]~[5] FR / [6]~[8] RL / [9]~[11] RR
@@ -16,7 +17,9 @@
 """
 import readline  # noqa: F401  input() 에서 방향키/백스페이스 편집 활성화
 import sys
+import termios
 import time
+import tty
 
 import board
 import busio
@@ -49,6 +52,27 @@ NAMES = {
 }
 
 ADDR = {id(kit): "0x40", id(kit2): "0x41"}
+
+# servo_controller.py 의 _servo_offsets. 캘리브레이션 시작점으로 쓴다.
+DEFAULT_OFFSETS = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]
+
+# 각 관절을 어떤 자세에 맞춰야 하는지 (work06.md 5절)
+# 기준 자세는 IK 의 theta=0, 즉 어깨관절부터 발끝까지 하나의 수직 직선이다.
+# 실제 직립 자세가 아니라는 점에 주의 - 서 있을 때는 IK 가 무릎을 굽힌다.
+POSE = {
+    "Lower": (
+        "대퇴부와 하퇴부의 내각 180도 (일직선)\n"
+        "    확인: 측면에서 발끝이 무릎관절 바로 아래"
+    ),
+    "Upper": (
+        "대퇴부가 수평면과 90도 (수직)\n"
+        "    확인: 측면에서 무릎관절이 엉덩관절 바로 아래"
+    ),
+    "Shoulder": (
+        "다리 축이 수직선과 0도 (좌우로 벌어지지 않음)\n"
+        "    확인: 정면에서 발끝이 어깨관절 바로 아래"
+    ),
+}
 
 
 def show_map():
@@ -106,9 +130,132 @@ def scan(start=0):
     print("\n(중단했다면 다음 실행 시: servo_check.py scan <다음 번호>)")
 
 
+def getch():
+    """키 하나를 Enter 없이 읽는다. 방향키는 3바이트 이스케이프 시퀀스."""
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+        if ch == "\x1b":
+            ch += sys.stdin.read(2)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    return ch
+
+
+# 키 -> 각도 증분
+STEP_KEYS = {
+    "\x1b[A": 1, "+": 1, "=": 1,      # 위 방향키
+    "\x1b[B": -1, "-": -1, "_": -1,   # 아래 방향키
+    "\x1b[C": 5, "]": 5,              # 오른쪽 방향키
+    "\x1b[D": -5, "[": -5,            # 왼쪽 방향키
+}
+
+
+def adjust(sv, start):
+    """한 관절을 조정한다. 확정 각도를 반환하고, 중단이면 None."""
+    angle = start
+    sv.angle = angle
+
+    if not sys.stdin.isatty():  # 파이프 등 TTY 가 아니면 줄 단위 입력
+        while True:
+            cmd = input(f"  현재 {angle}도 > ").strip().lower()
+            if cmd == "":
+                return angle
+            if cmd == "q":
+                return None
+            if cmd == "r":
+                angle = start
+            elif cmd in ("+", "++", "-", "--"):
+                angle += (5 if len(cmd) == 2 else 1) * (1 if cmd[0] == "+" else -1)
+            else:
+                try:
+                    angle = int(cmd)
+                except ValueError:
+                    print("  숫자 또는 + - ++ -- r q Enter")
+                    continue
+            angle = max(1, min(179, angle))
+            sv.angle = angle
+
+    while True:
+        print(f"\r  현재 {angle:>3}도   ", end="", flush=True)
+        key = getch()
+        if key in ("\r", "\n"):
+            print()
+            return angle
+        if key in ("q", "\x03"):    # q 또는 Ctrl-C
+            print()
+            return None
+        if key == "r":
+            angle = start
+        elif key == "g":            # 숫자 직접 입력
+            print()
+            try:
+                angle = int(input("  이동할 각도: ").strip())
+            except ValueError:
+                continue
+        elif key in STEP_KEYS:
+            angle += STEP_KEYS[key]
+        else:
+            continue
+        angle = max(1, min(179, angle))
+        sv.angle = angle
+
+
+def calibrate(only=None):
+    """관절을 기준 자세에 맞추는 서보 각도를 찾아 _servo_offsets 를 실측한다."""
+    print("기준 자세: 어깨관절부터 발끝까지 하나의 수직 직선 (IK 의 theta=0)")
+    print("           실제 직립 자세가 아니다. 서 있을 때는 IK 가 무릎을 굽힌다.")
+    print("           로봇이 수평으로 매달린 상태여야 기준이 맞는다.\n")
+    if sys.stdin.isatty():
+        print("  키 하나로 즉시 반응한다. Enter 불필요.")
+        print("  위/아래 방향키 (또는 + -)   1도씩")
+        print("  좌/우 방향키 (또는 [ ])     5도씩")
+        print("  g  각도 직접 입력      r  시작값으로 되돌림")
+        print("  Enter  확정하고 다음   q  중단하고 결과 출력\n")
+    else:
+        print("  숫자   해당 각도로 이동      +/-   1도씩      ++/--  5도씩")
+        print("  r      시작값으로 되돌림     Enter 확정하고 다음")
+        print("  q      중단하고 지금까지 결과 출력\n")
+
+    offsets = list(DEFAULT_OFFSETS)
+    targets = [only] if only is not None else range(12)
+
+    for i in targets:
+        kit_obj, ch = CHANNEL_MAP[i]
+        joint = NAMES[i].split("-")[1]
+
+        print(f"[idx {i}] {NAMES[i]}  ({ADDR[id(kit_obj)]} CH{ch})")
+        print(f"  목표 자세: {POSE[joint]}")
+
+        result = adjust(kit_obj.servo[ch], DEFAULT_OFFSETS[i])
+        if result is None:
+            print("\n중단합니다.")
+            show_offsets(offsets)
+            return
+        offsets[i] = result
+        print(f"  확정: {NAMES[i]} = {result}\n")
+
+    show_offsets(offsets)
+
+
+def show_offsets(offsets):
+    print("\n=== 실측 오프셋 ===")
+    for i in range(12):
+        mark = "" if offsets[i] == DEFAULT_OFFSETS[i] else f"  (기존 {DEFAULT_OFFSETS[i]})"
+        print(f"  idx {i:>2}  {NAMES[i]:<12} {offsets[i]:>3}{mark}")
+    print("\nservo_controller.py 에 붙여넣을 값:")
+    print(f"self._servo_offsets = {offsets}")
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] == "map":
         show_map()
+        return
+
+    if sys.argv[1] == "cal":
+        calibrate(int(sys.argv[2]) if len(sys.argv) > 2 else None)
         return
 
     if sys.argv[1] == "scan":

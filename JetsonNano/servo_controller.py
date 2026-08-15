@@ -38,7 +38,8 @@ class Controllers:
         print("Done initializing")
 
         # centered position perpendicular to the ground
-        self._servo_offsets = [170, 85, 90, 1, 95, 90, 172, 90, 90, 1, 90, 95]
+        # CM4 이식 후 실측값 (2026-08-15). 이전 Jetson 개체 값: [170,85,90,1,95,90,172,90,90,1,90,95]
+        self._servo_offsets = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]
         #self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
 
         self._val_list = np.zeros(12) #[ x for x in range(12) ]
@@ -95,9 +96,11 @@ class Controllers:
         for x in range(len(self._val_list)):
             
             if x>=0 and x<12:
-                self._val_list[x] = (self._val_list[x]-26.36)*(1980/1500)
-                #print(self._val_list[x], end=' ')
-                #if x%3 == 2: print()
+                # (val-26.36)*(1980/1500) 변환은 set_pulse_width_range 가 없던 시절
+                # ServoKit 기본 범위(750-2250)를 실제 서보 범위(460-2440)로 맞추던 보정이다.
+                # 지금은 set_pulse_width_range(500, 2500) 으로 범위를 직접 지정하므로
+                # 이 변환을 덧씌우면 이중 보정이 되어 offset 자체가 범위를 벗어난다.
+                # (예: offset 170 -> 189.6 "Over 180!!", offset 1 -> -33.5 "Under 0!!")
                 print(self._val_list[x])
 
                 if (self._val_list[x] > 180):

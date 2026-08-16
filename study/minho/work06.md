@@ -25,14 +25,37 @@
 | 무릎 (lower) — 좌 | **170°** | **다리 완전히 편 상태** (대퇴부·하퇴부 일직선) | ≈ 170 |
 | 무릎 (lower) — 우 | **10°** | **다리 완전히 편 상태** | ≈ 10 |
 
+배선이 [work09.md](work09.md) 의 매핑대로 되어 있으면 **인덱스(0~11)로 지정**한다.
+보드 주소와 채널은 `_channel_map` 이 알아서 변환하므로 신경 쓰지 않아도 된다.
+
 ```bash
-# 왼쪽 무릎
-python JetsonNano/examples/servo_check.py raw 41 0 170    # FL-Lower
-python JetsonNano/examples/servo_check.py raw 41 13 170   # RL-Lower
-# 오른쪽 무릎 (거울 대칭 반전 장착이라 반대편 끝)
-python JetsonNano/examples/servo_check.py raw 40 13 10    # FR-Lower
-python JetsonNano/examples/servo_check.py raw 40 0 10     # RR-Lower
+python JetsonNano/examples/servo_check.py 0 170    # FL-Lower
+python JetsonNano/examples/servo_check.py 6 170    # RL-Lower
+python JetsonNano/examples/servo_check.py 3 10     # FR-Lower  (거울 대칭이라 반대편 끝)
+python JetsonNano/examples/servo_check.py 9 10     # RR-Lower
+
+python JetsonNano/examples/servo_check.py 1 90     # 나머지 8개(어깨/엉덩이)는 90
+python JetsonNano/examples/servo_check.py 2 90
+# ... 4, 5, 7, 8, 10, 11 동일
 ```
+
+**결합 전 각도 한눈에 보기**
+
+| index | 관절 | 각도 | index | 관절 | 각도 |
+|:-----:|------|:----:|:-----:|------|:----:|
+| **0** | FL-Lower | **170** | **6** | RL-Lower | **170** |
+| 1 | FL-Upper | 90 | 7 | RL-Upper | 90 |
+| 2 | FL-Shoulder | 90 | 8 | RL-Shoulder | 90 |
+| **3** | FR-Lower | **10** | **9** | RR-Lower | **10** |
+| 4 | FR-Upper | 90 | 10 | RR-Upper | 90 |
+| 5 | FR-Shoulder | 90 | 11 | RR-Shoulder | 90 |
+
+> `raw <보드> <채널> <각도>` 는 **배선 전이거나 매핑 자체를 의심할 때만** 쓴다.
+> 배선이 끝난 뒤에는 인덱스가 더 간단하고 실수도 적다.
+> ```bash
+> python JetsonNano/examples/servo_check.py map        # 인덱스 -> 보드/채널 확인
+> python JetsonNano/examples/servo_check.py raw 41 0 170
+> ```
 
 > **왜 90° 가 아니라 170°/10° 인가.** 무릎을 90° 에서 결합하려면 "무릎을 약 80° 굽힌 자세"를
 > 잡아야 하는데, **80° 굽힘은 눈으로 판정하기 어렵다.** 반면 "다리 완전히 편 상태"는 명확하다.
@@ -157,10 +180,10 @@ thetas = kn.initIK(legEndpoints)
 
 ## 5. 조립 권장 순서
 
-1. **서보를 결합 각도로 설정** — 어깨·엉덩이는 90°, 무릎은 좌 170° / 우 10° (§1.1)
+1. **서보를 결합 각도로 설정** — 어깨·엉덩이는 90°, 무릎은 좌 170° / 우 10° (§1.1 표 참고)
    ```bash
-   python JetsonNano/examples/servo_check.py 4 90          # 인덱스로 (배선 완료 후)
-   python JetsonNano/examples/servo_check.py raw 40 14 90  # 배선 전이면 보드/채널로
+   python JetsonNano/examples/servo_check.py 4 90          # 인덱스 (배선 완료 후 권장)
+   python JetsonNano/examples/servo_check.py raw 40 14 90  # 배선 전에만 보드/채널로
    ```
 2. 그 상태에서 아래 다리 자세를 잡고 혼 결합:
 

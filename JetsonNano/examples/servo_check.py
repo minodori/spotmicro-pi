@@ -18,6 +18,8 @@
     [0]~[2] FL / [3]~[5] FR / [6]~[8] RL / [9]~[11] RR
     각 다리 안에서 Lower, Upper, Shoulder 순서.
 """
+import os
+import re
 import readline  # noqa: F401  input() 에서 방향키/백스페이스 편집 활성화
 import sys
 import termios
@@ -56,8 +58,29 @@ NAMES = {
 
 ADDR = {id(kit): "0x40", id(kit2): "0x41"}
 
-# servo_controller.py 의 _servo_offsets. 캘리브레이션 시작점으로 쓴다.
-DEFAULT_OFFSETS = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]
+def _loadOffsets():
+    """servo_controller.py 의 _servo_offsets 를 읽는다.
+
+    값을 이 파일에도 적어두면 두 곳이 어긋나므로 원본에서 직접 가져온다.
+    주석 처리된 줄은 건너뛴다.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "servo_controller.py")
+    pattern = re.compile(r"^\s*self\._servo_offsets\s*=\s*\[([^\]]*)\]")
+    try:
+        with open(path) as f:
+            for line in f:
+                m = pattern.match(line)
+                if m:
+                    vals = [int(x) for x in m.group(1).split(",")]
+                    if len(vals) == 12:
+                        return vals, path
+    except OSError:
+        pass
+    print("경고: servo_controller.py 에서 _servo_offsets 를 읽지 못했다. 90 으로 시작한다.")
+    return [90] * 12, path
+
+
+DEFAULT_OFFSETS, _OFFSET_SRC = _loadOffsets()
 
 # 각 관절을 어떤 자세에 맞춰야 하는지 (work06.md 5절)
 # 기준 자세는 IK 의 theta=0, 즉 어깨관절부터 발끝까지 하나의 수직 직선이다.
@@ -222,7 +245,11 @@ def calibrate(only=None):
         print("  r      시작값으로 되돌림     Enter 확정하고 다음")
         print("  q      중단하고 지금까지 결과 출력\n")
 
+    print(f"시작값 출처: {os.path.normpath(_OFFSET_SRC)}")
+    print(f"  {DEFAULT_OFFSETS}\n")
+
     offsets = list(DEFAULT_OFFSETS)
+    measured = set()
     targets = [only] if only is not None else range(12)
 
     for i in targets:
@@ -235,12 +262,13 @@ def calibrate(only=None):
         result = adjust(kit_obj.servo[ch], DEFAULT_OFFSETS[i])
         if result is None:
             print("\n중단합니다.")
-            show_offsets(offsets)
+            show_offsets(offsets, measured)
             return
         offsets[i] = result
+        measured.add(i)
         print(f"  확정: {NAMES[i]} = {result}\n")
 
-    show_offsets(offsets)
+    show_offsets(offsets, measured)
 
 
 def home():
@@ -259,11 +287,24 @@ def home():
     print("\n완료.")
 
 
-def show_offsets(offsets):
-    print("\n=== 실측 오프셋 ===")
+def show_offsets(offsets, measured):
+    """measured 에 없는 항목은 이번 실행에서 재지 않은 기존값이다."""
+    print("\n=== 오프셋 ===")
     for i in range(12):
-        mark = "" if offsets[i] == DEFAULT_OFFSETS[i] else f"  (기존 {DEFAULT_OFFSETS[i]})"
-        print(f"  idx {i:>2}  {NAMES[i]:<12} {offsets[i]:>3}{mark}")
+        if i not in measured:
+            note = "  (이번에 측정 안 함 - 기존값)"
+        elif offsets[i] != DEFAULT_OFFSETS[i]:
+            note = f"  <- 이번 측정 (기존 {DEFAULT_OFFSETS[i]})"
+        else:
+            note = "  <- 이번 측정 (기존값과 동일)"
+        print(f"  idx {i:>2}  {NAMES[i]:<12} {offsets[i]:>3}{note}")
+
+    missing = [i for i in range(12) if i not in measured]
+    if missing:
+        print(f"\n  주의: {len(missing)}개 관절이 이번 실행에서 측정되지 않았다: {missing}")
+        print("  아래 배열의 해당 항목은 이 스크립트의 DEFAULT_OFFSETS 값일 뿐이다.")
+        print("  그대로 붙여넣으면 다른 실행에서 잰 값을 덮어쓸 수 있으니 주의할 것.")
+        print("  전체를 다시 재려면 인덱스 없이:  servo_check.py cal")
     print("\nservo_controller.py 에 붙여넣을 값:")
     print(f"self._servo_offsets = {offsets}")
 

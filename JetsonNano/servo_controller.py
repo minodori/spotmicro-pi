@@ -39,8 +39,9 @@ class Controllers:
 
         # centered position perpendicular to the ground
         # CM4 이식 후 실측값 (2026-08-15). 이전 Jetson 개체 값: [170,85,90,1,95,90,172,90,90,1,90,95]
-        self._servo_offsets = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]
-        #self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
+        self._servo_offsets = [179, 88, 81, 13, 87, 88, 179, 96, 91, 5, 81, 81]
+        # self._servo_offsets = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]
+        # self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
 
         self._val_list = np.zeros(12) #[ x for x in range(12) ]
 

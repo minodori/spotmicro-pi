@@ -4,6 +4,58 @@
 
 ---
 
+## 0. 다음 세션 시작점
+
+### 지금 어디까지 왔나
+
+CM4 이식 완료, 12채널 배선·오프셋 검증 완료, **보행 동작하나 전진하지 않음** (제자리걸음 + 약간의 시계방향 회전).
+
+### 접속과 실행
+
+```bash
+ssh minodori@192.168.0.240              # CM4 (호스트명 RPi-CM4)
+cd ~/Projects/SpotMicroJetson
+source .venv/bin/activate
+
+python JetsonNano/examples/servo_check.py home   # 기준 자세 (다리 곧게 편 상태)
+python JetsonNano/servo_controller.py            # 직립 자세 (무릎 굽힘)
+python JetsonNano/start_automatic_gait.py        # 보행. sudo 불필요, stdin 입력 (§6.11)
+```
+
+보행 조작: `w`/`s` 전후, `a`/`d` 좌우, `q`/`e` 회전, `Space` 정지, `Ctrl-C` 종료.
+키가 누적되므로 화면의 `IDstepLength` 값을 보며 조작할 것. **음수가 전진이다**
+(발을 뒤로 밀면 몸통이 앞으로 나가므로).
+
+별도 터미널에서 전원 감시:
+```bash
+watch -n 1 'vcgencmd get_throttled; vcgencmd measure_temp'
+```
+
+### 다음에 할 일
+
+**전진하지 않는 원인 규명** → 상세는 [§6.15](#615-남은-문제--앞으로-나아가지-않음-다음-세션)
+
+1. **스윙 시간 `t3`** — 최우선. `Kinematics/kinematicMotion.py` 의 `t3` 를 200 → 400 으로.
+   실물 변경 없이 파라미터 하나로 검증되고, 제자리걸음 증상과 가장 잘 맞는다
+   (`0/1000/0/400` 조합은 접지 편차 0, 서보 여유 12° 로 계산 검증 완료)
+2. TPU 발바닥 신발 출력 (현재 PETG 노출)
+3. 무게중심 / 앞뒤 추진력 불균형
+
+### 주의사항
+
+- **서보 테스트는 로봇을 공중에 매단 상태로** 시작할 것
+- 배터리는 **11.1V 에서 중단** (3S LiPo, 3.7V/셀). 개발 중에는 12V 어댑터 권장
+- E-stop 은 서보 V+ 만 끊을 것. 전체 차단은 eMMC 손상 위험 ([§3.2](#32-비상-정지-설계))
+
+### 현재 오프셋
+
+```python
+self._servo_offsets = [179, 88, 81, 13, 87, 88, 179, 96, 91, 5, 81, 81]
+```
+`servo_check.py` 가 이 값을 `servo_controller.py` 에서 직접 읽으므로 한 곳만 고치면 된다.
+
+---
+
 ## 1. 배경
 
 work07.md에서 RPi 5 + NVMe 부팅까지 완료하고 work08~10.md로 전원·핀맵·플레이트 작업을 이어가던 중, **조립 과정에서 RPi 5가 부팅 불능 상태**가 되었다. 대체 보드로 보유 중이던 **Compute Module 4 8GB**로 전환했고, 그 과정에서 RPi 5와 다른 함정이 여러 개 나왔다.

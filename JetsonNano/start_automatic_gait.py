@@ -9,6 +9,7 @@ sys.path.append("..")
 
 import matplotlib.animation as animation
 import numpy as np
+import socket
 import time
 import math
 import datetime as dt
@@ -19,7 +20,9 @@ import spotmicroai
 import servo_controller
 
 from multiprocessing import Process
-from Common.multiprocess_kb import KeyInterrupt, keyboardAvailable
+from Common.multiprocess_kb import (KeyInterrupt, keyboardAvailable,
+                                    trimModes, TWIST_WARN_RATIO)
+from Common.web_control import startWebControl
 from Kinematics.kinematicMotion import KinematicMotion, TrottingGait
 
 rtime=time.time()
@@ -40,44 +43,55 @@ speed1=322
 speed2=237
 speed3=436
 
-spurWidth=robot.W/2+20
 stepLength=0
 stepHeight=72
 
-# Initial End point X Value for Front legs 
-iXf=120
-
 walk=False
+
+# 서보 인덱스 -> 관절 이름 (범위 초과 경고 표시용). servo_controller 의 순서와 동일.
+JOINT_NAMES = ["FL-Lower", "FL-Upper", "FL-Shoulder", "FR-Lower", "FR-Upper", "FR-Shoulder",
+               "RL-Lower", "RL-Upper", "RL-Shoulder", "RR-Lower", "RR-Upper", "RR-Shoulder"]
 
 def resetPose():
     # TODO: globals are bad
     global joy_x, joy_z, joy_y, joy_rz, joy_z
     joy_x, joy_y, joy_z, joy_rz = 128, 128, 128, 128
 
-# define our clear function 
-def consoleClear(): 
-  
-    # for windows 
-    if name == 'nt': 
-        _ = system('cls') 
-  
-    # for mac and linux(here, os.name is 'posix') 
-    else: 
-        _ = system('clear') 
+# define our clear function
+def consoleClear():
+    """화면을 지운다.
+
+    예전에는 system('clear') 로 셸을 fork 했는데, `| tee` 로 파이프하면
+    파이썬 stdout 이 블록 버퍼링이 되는 반면 자식 프로세스는 즉시 출력하므로
+    지우기와 출력의 순서가 어긋난다. 화면이 읽을 수 없게 되는 원인이었다.
+    같은 스트림에 이스케이프 시퀀스를 직접 써서 순서를 보장한다.
+    (루프 fork 가 사라져 CPU 도 덜 쓴다.)
+    """
+    sys.stdout.write("\x1b[H\x1b[2J\x1b[3J")
 
 
 
-Lp = np.array([[iXf, -100, spurWidth, 1], [iXf, -100, -spurWidth, 1],
-[-50, -100, spurWidth, 1], [-50, -100, -spurWidth, 1]])
+trotting=TrottingGait()
+
+# 정지(준비) 자세. 보행 궤적의 기본 발 위치와 같은 값을 쓴다.
+# 예전에는 여기에 iXf=120 / spurWidth=robot.W/2+20 (=80) 을 따로 적어서
+# TrottingGait 의 Fo/Ro/Spf/Spr 과 어긋났고, 보행을 시작하는 순간 발이
+# 앞뒤 20mm, 좌우 7~18mm 튀었다. 한 곳에서 가져오도록 바꿨다.
+Lp = np.array([[ trotting.Fo, -100,  trotting.Spf, 1],
+               [ trotting.Fo, -100, -trotting.Spf, 1],
+               [-trotting.Ro, -100,  trotting.Spr, 1],
+               [-trotting.Ro, -100, -trotting.Spr, 1]])
 
 motion=KinematicMotion(Lp)
 resetPose()
 
-trotting=TrottingGait()
-
 def main(id, command_status, keyInputs=None):
     jointAngles = []
     while True:
+        # 화면 지우기는 루프 "시작"에서 한다. 끝에서 지우면 방금 찍은 출력이
+        # 곧바로 사라져 화면에 남는 시간이 거의 없다 (키를 감각으로 눌러야 했다).
+        consoleClear()
+
         # stdin 모드에서는 별도 프로세스가 없으므로 여기서 키를 읽는다
         if keyInputs is not None:
             keyInputs.pollStdin()
@@ -92,20 +106,33 @@ def main(id, command_status, keyInputs=None):
         
         d=time.time()-rtime
 
-        # robot height
-        height = 40
-
         # calculate robot step command from keyboard inputs
         result_dict = command_status.get()
         print(result_dict)
         command_status.put(result_dict)
+
+        # 실시간 조정되는 값들. ~/.spotmicro_gait.json 에 저장되어 재시작해도 유지된다.
+        #
+        # height: bodyPosition 의 y 로 40+height 가 들어간다.
+        #   어깨축~발바닥 수직거리 = 140+height,  Upper축~발 거리 H = 120+height.
+        #   무릎 내각은 내각 110도 -> height 96,  120도 -> 108,  130도 -> 118.
+        #   범위와 기본값은 Common/gait_params.py 의 DEFAULTS 가 정한다.
+        height = result_dict.get('height', 110.0)
+        trotting.Sh = result_dict.get('Sh', 20.0)
+
+        # 다리별 y 트림 (조립 오차 보정). 보행 중에는 positions() 안에서 적용되고
+        # 정지 자세는 고정 배열이라 여기서 직접 더한다. 순서 0 FL, 1 FR, 2 RL, 3 RR
+        trim = result_dict.get('IDtrim', [0.0] * 4)
 
         # wait 3 seconds to start
         if result_dict['StartStepping']:
             currentLp = trotting.positions(d-3, result_dict)
             robot.feetPosition(currentLp)
         else:
-            robot.feetPosition(Lp)
+            standLp = np.array(Lp, dtype=float)
+            for i in range(4):
+                standLp[i][1] += trim[i]
+            robot.feetPosition(standLp)
         #roll=-xr
         roll=0
         robot.bodyRotation((roll,math.pi/180*((joy_x)-128)/3,-(1/256*joy_y-0.5)))
@@ -116,10 +143,19 @@ def main(id, command_status, keyInputs=None):
         jointAngles = robot.getAngle()
         print(jointAngles)
         
+        # 파라미터 조합(몸통 높이 x 트림 x 보폭)이 도달 불가 영역에 들어갔는지
+        # 계산 결과로 직접 확인한다. 조합이 많아 정적 범위로는 다 막을 수 없다.
+        blocked = []
+        ikFail = len(jointAngles) and bool(np.isnan(np.asarray(jointAngles)).any())
+
         # First Step doesn't contains jointAngles
-        if len(jointAngles):
+        if len(jointAngles) and not ikFail:
             # Real Actuators
-            controller.servoRotate(jointAngles)
+            blocked = controller.servoRotate(jointAngles) or []
+
+        if keyInputs is not None:
+            keyInputs.runtime['blocked'] = blocked
+            keyInputs.runtime['ikFail'] = bool(ikFail)
             
             # # Plot Robot Pose into Matplotlib for Debugging
             # TODO: Matplotplib animation
@@ -127,13 +163,50 @@ def main(id, command_status, keyInputs=None):
             # kn.plotKinematics()
 
         robot.step()
-        consoleClear()
+
+        # 상태판은 루프 마지막에 찍는다. 화면 맨 아래에 남으므로 촬영 중에도 읽힌다.
+        # 경고는 대각(twist) 성분만 본다. 앞뒤/좌우 오프셋은 몸통이 그쪽으로
+        # 기울면 네 발이 다 닿지만, 대각은 흔들리는 탁자와 같아 닿을 수 없다.
+        pitchT, rollT, twistT = trimModes(trim)
+        twistGap = abs(twistT) * 2            # 두 대각선의 높이차
+        warn = ("  <-- 대각 차이 과다. 높은 쌍이 접지 못 할 수 있다"
+                if twistGap > trotting.Sh * TWIST_WARN_RATIO else "")
+        print("=" * 64)
+        print(f" 보폭 {result_dict['IDstepLength']:+6.0f}mm   "
+              f"{'보행중' if result_dict['StartStepping'] else '정지'}"
+              f"   (w 전진 / s 후진, 1회 10mm, 음수가 전진)")
+        print(f" 트림 mm   FL {trim[0]:+5.0f}   FR {trim[1]:+5.0f}      "
+              f"i(FL) o(FR)   소문자 = 올림")
+        print(f"           RL {trim[2]:+5.0f}   RR {trim[3]:+5.0f}      "
+              f"k(RL) l(RR)   대문자 = 내림")
+        print(f" 앞뒤 {pitchT:+.1f}   좌우 {rollT:+.1f}   대각 {twistT:+.1f}"
+              f"  (대각차 {twistGap:.1f}mm){warn}")
+        print(f" 몸통높이 {height:.0f} (t 높임 / g 낮춤)    발들어올림 Sh {trotting.Sh:.0f} (r/f)")
+        print(" y/h 앞뒤기울기   u/j 좌우기울기   p 트림리셋   space 정지   Ctrl-C 종료")
+        if ikFail:
+            print(" !! IK 도달 불가 - 서보 명령 중단. 몸통을 낮추거나(g) 보폭을 줄여라")
+        elif blocked:
+            names = ", ".join(JOINT_NAMES[i] for i in blocked)
+            print(f" !! 범위 초과로 전송 못 한 관절: {names}  (그 관절은 얼어붙는다)")
+        print("=" * 64)
+        # 이 flush 가 있어야 지우기와 출력의 순서가 보장된다 (파이프 실행 시 특히)
+        sys.stdout.flush()
 
 
 if __name__ == "__main__":
     KeyProcess = None
     savedTerm = None
     KeyInputs = KeyInterrupt()
+
+    # 폰으로 로봇을 보면서 조작하기 위한 웹 UI. 데몬 스레드라 종료를 막지 않는다.
+    # 실패해도(포트 사용 중 등) 키보드 조작은 그대로 된다.
+    if startWebControl(KeyInputs):
+        try:
+            _ip = socket.gethostbyname(socket.gethostname())
+        except OSError:
+            _ip = "<로봇IP>"
+        print(f"웹 UI: http://{_ip}:8080   (폰 브라우저로 접속)")
+
     try:
         # keyboard 라이브러리는 root 권한과 /dev/input 의 물리 키보드를 요구한다.
         # SSH 로 접속한 경우엔 sudo 로 실행해도 키가 전달되지 않으므로 stdin 을 쓴다.
@@ -144,6 +217,9 @@ if __name__ == "__main__":
             main(2, KeyInputs.command_status)
         else:
             print("입력: stdin (이 터미널에서 w/a/s/d/q/e, space=정지, Ctrl-C 종료)")
+            print("트림: i=FL o=FR k=RL l=RR 올림, 대문자(Shift)면 내림. 1회당 1mm.")
+            print("      i o / k l 이 위에서 본 다리 배치다. 끌리는 다리를 올린다.")
+            print("      y/h 앞뒤기울기   u/j 좌우기울기   t/g 몸통높이   r/f 발들어올림   p 리셋")
             time.sleep(1.5)
             savedTerm = KeyInputs.beginStdin()
             main(2, KeyInputs.command_status, KeyInputs)

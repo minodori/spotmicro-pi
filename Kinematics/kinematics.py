@@ -24,13 +24,26 @@ def setupView(limit):
 class Kinematic:
 
     def __init__(self):
-        self.l1=50
+        # 실측 (2026-08-19). 이전 값 l1=50 l2=20 l3=100 l4=100 L=140 W=75 는
+        # 실물과 크게 달라 IK 가 계산한 발끝 위치 자체가 틀렸다.
+        # 다리 전체 길이가 200 -> 263mm (1.31배), 몸통 앞뒤가 140 -> 185mm.
+        #
+        #   l1  어깨축 -> Upper축, 좌우 성분   : 앞발 트랙폭 190mm 에서 역산 (W+2*l1)
+        #   l2  어깨축 -> Upper축, 수직 성분   : 어깨축~발바닥 240 - Upper축~발바닥 220
+        #   l3  Upper축 -> 무릎축 (대퇴부)     : 블렌더 측면도 실측. STL 원피팅 122.7 과 근접
+        #   l4  무릎축 -> 발바닥 (하퇴부)      : 블렌더 135 + 미끄럼방지 패드 3
+        #   L   앞뒤 어깨축 간격               : 실측. URDF(186)와 일치
+        #   W   좌우 어깨축 간격               : STL 어깨 브래킷, 원피팅 오차 0.000
+        #
+        # l3/l4 는 회전축에 수직인 평면(사지 평면)에서의 거리다. 두 축이 평행하므로
+        # 축 방향 성분은 포함하지 않는다.
+        self.l1=56
         self.l2=20
-        self.l3=100
-        self.l4=100
+        self.l3=125
+        self.l4=138
 
-        self.L = 140
-        self.W = 75
+        self.L = 185
+        self.W = 78
         
         #leg iterators. ex. LEG_BACK + LEG_LEFT -> array[2]
         self.LEG_FRONT = 0

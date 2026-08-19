@@ -35,6 +35,8 @@ button:active{background:#4a5261}
 .row .rv{width:56px;text-align:right;font-variant-numeric:tabular-nums}
 .bar{display:flex;gap:8px;margin:10px 0}
 .bar button{width:auto;flex:1;padding:14px 0}
+.pad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+.pad button{width:100%;padding:16px 0;font-size:17px}
 .stop{background:#7a2b2b}
 .warn{background:#6b4a13;border-radius:8px;padding:8px;margin:8px 0;font-size:13px;display:none}
 .hint{color:#7d838d;font-size:12px;margin:-4px 0 10px 82px}
@@ -65,22 +67,34 @@ button:active{background:#4a5261}
 </div>
 
 <div class="row"><label>몸통 높이</label>
- <input type="range" id="height" min="20" max="70" step="1"><span class="rv" id="heightv"></span></div>
-<div class="hint">낮으면 무릎이 더 굽어 토크가 커진다. 높이면 다리가 펴져 토크가 줄고 지면 여유가 는다.</div>
+ <input type="range" id="height" step="1"><span class="rv" id="heightv"></span></div>
+<div class="hint">어깨축~발바닥 = 140 + 이 값. 무릎내각 110도가 96, 120도가 108, 130도가 118.</div>
 <div class="row"><label>발 들어올림</label>
- <input type="range" id="Sh" min="5" max="25" step="1"><span class="rv" id="Shv"></span></div>
+ <input type="range" id="Sh" step="1"><span class="rv" id="Shv"></span></div>
 <div class="hint">스윙 중 발이 지면에서 뜨는 높이. 작으면 발이 끌리고, 크면 무릎이 궤적을 못 따라간다.</div>
 
 <h2>보행</h2>
-<div class="bar">
- <button onclick="step('w')">전진 +</button>
- <button onclick="step('s')">후진 +</button>
+<div class="pad">
+ <div></div>
+ <button onclick="step('w')">전진</button>
+ <div></div>
+ <button onclick="step('a')">◀ 좌</button>
  <button class="stop" onclick="cmd({stop:1})">정지</button>
+ <button onclick="step('d')">우 ▶</button>
+ <div></div>
+ <button onclick="step('s')">후진</button>
+ <div></div>
 </div>
+<div class="bar">
+ <button onclick="step('q')">↺ 좌회전</button>
+ <button onclick="step('e')">우회전 ↻</button>
+</div>
+<div class="hint2">누를 때마다 누적된다. 전후 10mm, 좌우 10mm, 회전 3도.
+ 회전은 스윙 구간에 보정이 빠져 있어 발이 튄다 (3도당 약 4mm). 작게 쓸 것.</div>
 
 <div class="st">
- 보폭 <b id="sl">-</b> mm &nbsp; <b id="mode">-</b><br>
- 대각 차이 <b id="spread">-</b> mm
+ 보폭 <b id="sl">-</b>mm &nbsp; 좌우 <b id="sw">-</b>mm &nbsp; 회전 <b id="sa">-</b>°<br>
+ <b id="mode">-</b> &nbsp; 대각 차이 <b id="spread">-</b>mm
 </div>
 
 <script>
@@ -116,9 +130,12 @@ function draw(s){
  document.getElementById("tilt").textContent=
   `앞뒤 ${pitch>0?"+":""}${pitch.toFixed(1)}  좌우 ${roll>0?"+":""}${roll.toFixed(1)} mm`;
  document.getElementById("sl").textContent=s.IDstepLength.toFixed(0);
+ document.getElementById("sw").textContent=(s.IDstepWidth*2).toFixed(0);
+ document.getElementById("sa").textContent=s.IDstepAlpha.toFixed(0);
  document.getElementById("mode").textContent=s.StartStepping?"보행중":"정지";
  for(const k of ["height","Sh"]){
   const el=document.getElementById(k);
+  if(s.ranges&&s.ranges[k]){el.min=s.ranges[k][0];el.max=s.ranges[k][1];}
   if(document.activeElement!==el)el.value=s[k];
   document.getElementById(k+"v").textContent=(+s[k]).toFixed(0);
  }
@@ -139,6 +156,8 @@ def startWebControl(keyInputs, port=8080):
     def state():
         s = keyInputs.snapshot()
         s['twistRatio'] = TWIST_WARN_RATIO
+        # 슬라이더 범위를 여기서 내려준다. HTML 에 적어두면 DEFAULTS 와 어긋난다.
+        s['ranges'] = {k: [lo, hi] for k, (_, lo, hi) in DEFAULTS.items() if lo is not None}
         s.update(getattr(keyInputs, 'runtime', {}))   # 제어 루프가 갱신하는 실시간 상태
         for k in DEFAULTS:
             s.setdefault(k, DEFAULTS[k][0])

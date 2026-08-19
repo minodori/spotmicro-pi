@@ -10,7 +10,10 @@
     python3 servo_check.py raw <40|41> <ch> [angle]     보드/채널 직접 지정
     python3 servo_check.py scan                         12개 채널 순차 스윕 (실측용)
     python3 servo_check.py cal [index]                  오프셋 대화형 캘리브레이션
-    python3 servo_check.py home                         12개를 기준 자세(오프셋)로 한번에
+    python3 servo_check.py home [force]                 12개를 기준 자세(오프셋)로 한번에
+                                                        (가동 한계에 붙은 오프셋은 건너뜀)
+    python3 servo_check.py release [index]              PWM 을 끊어 힘을 뺀다 (stall 방지)
+    python3 servo_check.py status                        각 채널이 구동 중인지 읽는다 (서보 안 움직임)
 
 직립 자세(IK 로 무릎을 굽힌 자세)는 ../servo_controller.py 를 실행한다.
 
@@ -30,6 +33,9 @@ import board
 import busio
 from adafruit_servokit import ServoKit
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from Common.servo_oe import OutputEnable, configurePCA
+
 i2c = busio.I2C(board.SCL, board.SDA)
 kit = ServoKit(channels=16, i2c=i2c, address=0x40)   # 배터리 우측 보드 -> 오른쪽 다리
 kit2 = ServoKit(channels=16, i2c=i2c, address=0x41)  # 배터리 좌측 보드 -> 왼쪽 다리
@@ -38,6 +44,24 @@ kit2 = ServoKit(channels=16, i2c=i2c, address=0x41)  # 배터리 좌측 보드 -
 for ch in range(16):
     kit.servo[ch].set_pulse_width_range(500, 2500)
     kit2.servo[ch].set_pulse_width_range(500, 2500)
+
+# OE 를 고임피던스 방식으로 설정하고 라인을 잡는다. 배선이 안 되어 있거나
+# gpiod 가 없으면 조용히 무시되고 기존 동작 그대로다.
+for _k in (kit, kit2):
+    configurePCA(_k._pca)
+OE = OutputEnable()
+OE.enable(True)
+
+
+def holdUntilEnter(msg="Enter 를 누르면 릴리즈하고 종료"):
+    """OE 페일세이프 배선에서는 프로세스가 끝나면 서보가 풀린다.
+    각도를 세팅하고 혼을 끼우는 작업은 그동안 자세를 붙들고 있어야 한다."""
+    if not OE.available:
+        return          # 배선 전이면 서보가 알아서 유지하므로 기다릴 필요 없다
+    try:
+        input(f"  {msg} ")
+    except (EOFError, KeyboardInterrupt):
+        print()
 
 # index -> (kit, 보드 채널). servo_controller.py 와 동기화 유지할 것.
 # 배선이 짧아지는 헤더를 고른 결과.
@@ -229,8 +253,22 @@ def adjust(sv, start):
         sv.angle = angle
 
 
+# 캘리브레이션 순서: 다리마다 Shoulder -> Upper -> Lower.
+# Shoulder 가 안 맞으면 다리가 옆으로 벌어진 상태이고, 그 상태에서 측면으로
+# "대퇴부 수직" 이나 "발끝이 무릎 아래" 를 판정하면 왜곡된다.
+# 인덱스는 다리 안에서 Lower, Upper, Shoulder 순이므로 다리별로 역순으로 돈다.
+CAL_ORDER = [2, 1, 0,     # FL  Shoulder, Upper, Lower
+             5, 4, 3,     # FR
+             8, 7, 6,     # RL
+             11, 10, 9]   # RR
+
+
 def calibrate(only=None):
-    """관절을 기준 자세에 맞추는 서보 각도를 찾아 _servo_offsets 를 실측한다."""
+    """관절을 기준 자세에 맞추는 서보 각도를 찾아 _servo_offsets 를 실측한다.
+
+    측정 순서는 CAL_ORDER (Shoulder -> Upper -> Lower). 결과 출력은
+    붙여넣기 편하도록 인덱스 순서(0~11)를 유지한다.
+    """
     print("기준 자세: 어깨관절부터 발끝까지 하나의 수직 직선 (IK 의 theta=0)")
     print("           실제 직립 자세가 아니다. 서 있을 때는 IK 가 무릎을 굽힌다.")
     print("           로봇이 수평으로 매달린 상태여야 기준이 맞는다.\n")
@@ -250,7 +288,7 @@ def calibrate(only=None):
 
     offsets = list(DEFAULT_OFFSETS)
     measured = set()
-    targets = [only] if only is not None else range(12)
+    targets = [only] if only is not None else CAL_ORDER
 
     for i in targets:
         kit_obj, ch = CHANNEL_MAP[i]
@@ -271,20 +309,91 @@ def calibrate(only=None):
     show_offsets(offsets, measured)
 
 
-def home():
+# 이 범위를 벗어난 오프셋은 서보 내부 스토퍼에 밀어붙일 위험이 있다.
+# 좌측 무릎(FL/RL-Lower)의 179 는 "가동 한계에서 다리가 곧게 펴진다" 는 뜻이라
+# 그대로 명령하면 스토퍼를 계속 미는 stall 이 된다. DS3235 는 신호를 끊어도
+# setpoint 를 유지하므로 스크립트가 끝나도 계속 밀고 있다.
+SAFE_BAND = (8, 172)
+
+
+def home(force=False):
     """12개 서보를 각자의 오프셋(기준 자세)으로 보낸다.
 
     기준 자세는 다리를 곧게 편 수직선이다. 무릎이 약간 굽은 직립 자세는
     IK 가 필요하므로 ../servo_controller.py 를 실행할 것.
+
+    SAFE_BAND 를 벗어난 오프셋은 기본적으로 건너뛴다. force=True 로 강제할 수
+    있지만, 그 관절은 가동 한계를 계속 밀게 되므로 짧게만 쓸 것.
     """
     print("기준 자세(다리 곧게 편 상태)로 이동한다.")
     print("무릎이 굽은 직립 자세는 ../servo_controller.py 를 실행할 것.\n")
+    lo, hi = SAFE_BAND
+    skipped = []
     for i in range(12):
         kit_obj, ch = CHANNEL_MAP[i]
-        kit_obj.servo[ch].angle = DEFAULT_OFFSETS[i]
-        print(f"  idx {i:>2}  {NAMES[i]:<12} -> {DEFAULT_OFFSETS[i]:>3}도")
+        target = DEFAULT_OFFSETS[i]
+        if not lo <= target <= hi and not force:
+            skipped.append(i)
+            print(f"  idx {i:>2}  {NAMES[i]:<12} -- {target:>3}도 건너뜀 (가동 한계 stall 위험)")
+            continue
+        kit_obj.servo[ch].angle = target
+        print(f"  idx {i:>2}  {NAMES[i]:<12} -> {target:>3}도")
         time.sleep(0.15)  # 12개 동시 기동 시 돌입 전류가 몰리는 것을 피한다
+    holdUntilEnter()
     print("\n완료.")
+    if skipped:
+        print(f"  {len(skipped)}개를 건너뛰었다: {[NAMES[i] for i in skipped]}")
+        print(f"  오프셋이 {lo}~{hi} 밖이라 서보를 스토퍼에 밀어붙인다.")
+        print("  혼을 스플라인 한 칸(약 18도) 안쪽으로 다시 물려 여유를 만드는 것이 근본 해결이다.")
+        print("  꼭 필요하면:  servo_check.py home force")
+
+
+def release(only=None):
+    """서보의 PWM 을 끊어 유지 토크를 없앤다.
+
+    프로세스가 끝나도 PCA9685 는 마지막 펄스폭을 계속 내보내므로, 서보는 목표
+    각도를 물고 stall 전류를 먹는다. 테스트를 마쳤으면 이걸로 풀어둘 것.
+
+    angle = None 은 duty_cycle 을 0 으로 만들어 펄스 자체를 멈춘다.
+    """
+    targets = [only] if only is not None else range(12)
+    print("주의: 지면에 서 있는 상태에서 풀면 그대로 주저앉는다. 매단 상태에서 실행할 것.\n")
+    for i in targets:
+        kit_obj, ch = CHANNEL_MAP[i]
+        kit_obj.servo[ch].angle = None
+        print(f"  idx {i:>2}  {NAMES[i]:<12} ({ADDR[id(kit_obj)]} CH{ch}) 펄스 정지")
+    if OE.available and only is None:
+        OE.release()
+        print("\n  OE 고임피던스 - 신호선을 놓았다. 실제로 힘이 빠진다.")
+    elif not OE.available:
+        print(f"\n  주의: OE 제어 불가 ({OE.reason or 'OE 배선 없음'}).")
+        print("  이 로봇의 DS 계열 서보는 펄스를 끊어도(LOW) 마지막 목표값을 유지한다.")
+        print("  실제 릴리즈에는 OE 배선이 필요하다. Common/servo_oe.py 참고.")
+    print("\n완료. 다시 힘을 주려면: servo_check.py home")
+
+
+def status():
+    """PCA9685 의 LEDn_ON/OFF 레지스터를 읽어 채널별 구동 여부를 본다.
+
+    릴리즈가 먹었는지 판정하는 유일하게 확실한 방법이다. 관절이 늘어지는지로는
+    판단할 수 없다 - Upper/Lower 는 다리가 회전축 바로 아래에 매달려 중력 토크가
+    거의 0 이므로, 힘이 빠져도 그 자리에 그대로 있다. Shoulder 만 축에서 l1(50mm)
+    옆으로 떨어져 있어 눈에 보이게 늘어진다.
+
+    레지스터를 읽기만 하므로 서보는 움직이지 않는다.
+    """
+    print("idx  관절          보드   CH   on     off    상태")
+    for i in range(12):
+        kit_obj, ch = CHANNEL_MAP[i]
+        on, off = kit_obj._pca.pwm_regs[ch]   # ServoKit 이 감싼 PCA9685 를 직접 읽는다
+        if off == 0x1000:                     # full-off 비트 (LEDn_OFF_H bit4)
+            state = "릴리즈됨"
+        elif on == 0x1000:
+            state = "FULL ON (비정상)"
+        else:
+            us = off / 4096 * (1e6 / kit_obj._pca.frequency)
+            state = f"구동 중 {us:.0f}us"
+        print(f"{i:>3}  {NAMES[i]:<12}  {ADDR[id(kit_obj)]}  {ch:>2}  {on:>5}  {off:>5}  {state}")
 
 
 def show_offsets(offsets, measured):
@@ -315,7 +424,15 @@ def main():
         return
 
     if sys.argv[1] == "home":
-        home()
+        home(force=len(sys.argv) > 2 and sys.argv[2] == "force")
+        return
+
+    if sys.argv[1] == "status":
+        status()
+        return
+
+    if sys.argv[1] == "release":
+        release(int(sys.argv[2]) if len(sys.argv) > 2 else None)
         return
 
     if sys.argv[1] == "cal":
@@ -365,6 +482,7 @@ def main():
             return
         sv.angle = angle
         print(f"{label} -> {angle}도")
+        holdUntilEnter("혼 결합이 끝나면 Enter (그때까지 이 자세를 유지한다)")
 
 
 if __name__ == "__main__":

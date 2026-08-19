@@ -3,6 +3,7 @@ sys.path.append("..")
 
 import Kinematics.kinematics as kn
 import numpy as np
+from Common.servo_oe import OutputEnable, configurePCA
 from adafruit_servokit import ServoKit
 import board
 import busio
@@ -30,6 +31,17 @@ class Controllers:
             9: (self._kit, 0),   10: (self._kit, 1),  11: (self._kit, 2),   # RR -> 0x40 CH0~2   (우측 반전 -> 앞단이 뒤쪽)
         }
 
+        # OE(Output Enable)로 실제 릴리즈가 가능하도록 설정한다.
+        # 이 로봇의 DS 계열 서보는 펄스를 끊어도(신호선 LOW) 마지막 목표값을 유지한다.
+        # 신호선이 "뜬 상태" 여야만 힘이 빠지고, OUTNE=10 + OE HIGH 가 그 상태를 만든다.
+        # 배선이 없거나 gpiod 가 없으면 조용히 무시되고 기존 동작 그대로다.
+        for kit_obj in (self._kit, self._kit2):
+            configurePCA(kit_obj._pca)
+        self._oe = OutputEnable()
+        self._oe.enable(True)
+        if self._oe.available:
+            print("OE 제어 활성 - 프로그램이 끝나면 서보가 자동 릴리즈된다")
+
         # DS3230 / DS3235 pulse width spec: 500-2500usec
         # 기본값(750-2250)으로 남는 채널이 없도록 실제 사용하는 채널 전부에 적용한다.
         for kit_obj, ch in self._channel_map.values():
@@ -39,7 +51,11 @@ class Controllers:
 
         # centered position perpendicular to the ground
         # CM4 이식 후 실측값 (2026-08-15). 이전 Jetson 개체 값: [170,85,90,1,95,90,172,90,90,1,90,95]
-        self._servo_offsets = [179, 88, 81, 13, 87, 88, 179, 96, 91, 5, 81, 81]
+        # RR-Lower(idx 9): 혼 이탈 후 삽입부를 갈아 완전 체결하며 5 -> 26 으로 바뀌었다.
+        # 스플라인 한 칸만큼 안쪽으로 들어와 가동 한계 여유가 생겼다.
+        self._servo_offsets = [165, 83, 79, 25, 83, 95, 164, 91, 88, 23, 81, 77] #5 Futaba 25kg
+
+        # self._servo_offsets = [179, 88, 81, 13, 87, 88, 179, 96, 91, 26, 81, 81]
         # self._servo_offsets = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]
         # self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
 
@@ -92,10 +108,17 @@ class Controllers:
         return self._val_list
 
     def servoRotate(self, thetas):
+        """서보에 각도를 쓴다. 범위를 벗어나 전송하지 못한 인덱스 목록을 반환한다.
+
+        반환값은 보행 중 실시간 안전 표시에 쓴다. 파라미터(몸통 높이/트림/보폭)의
+        조합에 따라 도달 불가 영역에 들어갈 수 있는데, 조합이 많아 정적 범위로는
+        다 막을 수 없다. 실제 계산 결과를 보고 경고하는 편이 확실하다.
+        """
+        blocked = []
         self.angleToServo(thetas)
         #self.angleToServo(np.zeros((4,3)))
         for x in range(len(self._val_list)):
-            
+
             if x>=0 and x<12:
                 # (val-26.36)*(1980/1500) 변환은 set_pulse_width_range 가 없던 시절
                 # ServoKit 기본 범위(750-2250)를 실제 서보 범위(460-2440)로 맞추던 보정이다.
@@ -107,13 +130,32 @@ class Controllers:
                 if (self._val_list[x] > 180):
                     print("Over 180!!")
                     self._val_list[x] = 179
+                    blocked.append(x)
                     continue
                 if (self._val_list[x] <= 0):
                     print("Under 0!!")
                     self._val_list[x] = 1
+                    blocked.append(x)
                     continue
                 kit_obj, ch = self._channel_map[x]
                 kit_obj.servo[ch].angle = self._val_list[x]
+
+        return blocked
+
+    def releaseAll(self):
+        """모든 서보의 PWM 을 끊어 유지 토크를 없앤다.
+
+        프로세스가 끝나도 PCA9685 는 마지막 펄스폭을 계속 내보내므로, 서보는
+        목표 각도를 물고 stall 전류를 먹는다. 테스트를 마쳤으면 풀어둘 것.
+        angle = None 은 duty_cycle 을 0 으로 만들어 펄스 자체를 멈춘다.
+
+        지면에 서 있는 상태에서 호출하면 그대로 주저앉는다.
+        """
+        for kit_obj, ch in self._channel_map.values():
+            kit_obj.servo[ch].angle = None
+        # 펄스만 끊으면 DS 계열은 마지막 목표값을 유지한다. OE 로 신호선을 놓아야
+        # 실제로 힘이 빠진다.
+        self._oe.release()
 
 
 if __name__=="__main__":

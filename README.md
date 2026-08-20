@@ -60,23 +60,42 @@ python JetsonNano/start_automatic_gait.py
 
 ## 저장소 구조
 
-이 저장소는 오픈소스 프로젝트를 상속받았습니다. **무엇이 상속이고 무엇이 새로
-만든 것인지 명시합니다.**
+이 저장소는 오픈소스 프로젝트를 상속받았습니다.
+**`[신규]` 는 본 팀이 만든 것, `[상속]` 은 upstream 에서 받은 것입니다.**
 
-| 경로 | 내용 | 출처 |
-|---|---|---|
-| `rl/` | MuJoCo 모델 생성·검증, 강화학습 환경·학습 | **본 팀 신규** |
-| `Common/` | 서보 매핑, 보행 파라미터, 폰 조작 UI | **본 팀 신규** |
-| `study/` | 개발 일지 — 3인, 11주 | **본 팀 신규** |
-| `docs/` | 하드웨어 문서, 배선도, 데모 미디어 | **본 팀 신규** |
-| `Kinematics/` | 역기구학 — **실측 링크 길이로 정정** | upstream + 본 팀 수정 |
-| `JetsonNano/` | 서보 제어 — **PCA9685 채널 매핑·펄스폭 캘리브레이션 수정**<br>디렉터리명은 upstream 유래이며 **현재 대상 보드는 Raspberry Pi CM4** | upstream + 본 팀 수정 |
-| `Simulation/` | PyBullet 시뮬레이션 (초기 검증용) | upstream |
-| `urdf/` | 초기 URDF. **강화학습에는 `rl/mjcf/` 를 사용합니다** | upstream |
-| `STL/` `STEP_Files/` `Parts/` | 3D 기구 설계 | Thingiverse `thing:3445283` — KDY0523 |
-| `Images/` | **upstream 데모 영상 — Road-Balance 팀 로봇입니다** | upstream |
+```
+oss_spotmicro/
+├── rl/                     강화학습 — 모델 생성부터 학습까지         [신규]
+│   ├── gen_mjcf.py           실측 기구 상수 -> MuJoCo 모델 생성
+│   ├── validate_mjcf.py      검증 게이트 (순기구학 대조 등 8종)
+│   ├── model_api.py          학습이 참조하는 단일 인터페이스
+│   ├── render_gait.py        보행 렌더링
+│   └── mjcf/                 생성된 로봇 모델
+├── Common/                 로봇 런타임                                [신규]
+│   ├── servo_map.py          서보 오프셋·부호 (단일 출처)
+│   ├── gait_params.py        보행 파라미터
+│   └── web_control.py        폰 웹 조작 UI
+├── Kinematics/             역기구학 — 실측 링크 길이로 정정     [상속+수정]
+├── JetsonNano/             서보 제어 · PCA9685                  [상속+수정]
+│                             디렉터리명은 upstream 유래.
+│                             현재 대상 보드는 Raspberry Pi CM4
+├── study/                  개발 일지 — 3인 11주                       [신규]
+├── docs/                   하드웨어 문서 · 배선도 · 데모 미디어        [신규]
+├── checkpoints/            학습된 정책 가중치                          [신규]
+├── Simulation/             PyBullet — 초기 검증용                      [상속]
+├── urdf/                   초기 URDF (학습에는 rl/mjcf/ 사용)          [상속]
+├── STL/ STEP_Files/ Parts/ 3D 기구 설계 — CC BY 3.0                    [상속]
+│   └── STL/kinetiq/          본 팀 설계 파트 (거치대·마운팅 플레이트)  [신규]
+├── Images/                 upstream 데모 — Road-Balance 팀 로봇        [상속]
+├── LICENSE                 GPL-3.0
+└── NOTICE                  출처·라이선스 상세
+```
 
-> `Images/` 의 GIF 는 본 팀 로봇이 아닙니다. 본 팀 미디어는 `docs/media/` 에 있습니다.
+> **`Images/` 의 GIF 는 본 팀 로봇이 아닙니다.** upstream 데모이며, 본 팀이
+> 촬영한 미디어는 `docs/media/` 에 있습니다.
+>
+> **소프트웨어와 3D 모델의 라이선스가 다릅니다** — 코드는 GPL-3.0, 기구 설계는
+> CC BY 3.0. 상세는 [`NOTICE`](NOTICE) 4장.
 
 ---
 

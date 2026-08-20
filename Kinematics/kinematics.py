@@ -1,17 +1,23 @@
-from mpl_toolkits import mplot3d
 import numpy as np
 from math import *
 import random
 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+# matplotlib 은 그릴 때만 불러온다.
+#
+# 예전에는 모듈 최상위에서 import 하고 `fig = plt.figure()` 까지 실행했다.
+# 이 파일은 실측 링크 상수(l1~l4, L, W)와 IK 를 담고 있어 시뮬레이터·학습 코드가
+# 반드시 import 하는데, 그때마다 다음 일이 벌어졌다:
+#   - matplotlib 이 없는 환경에서는 import 자체가 실패한다
+#   - 학습 환경을 병렬로 띄우면 프로세스마다 figure 를 만든다 (헤드리스에서 백엔드 문제)
+#   - `np.random.rand(2,25)` 가 전역 난수 상태를 소비해 시드 재현성을 깬다
+# 상수를 읽으려고 import 했을 뿐인데 부작용이 따라오면 안 된다.
+def _plt():
+    import matplotlib.pyplot as plt
+    return plt
 
-from mpl_toolkits.mplot3d import Axes3D
-
-fig = plt.figure()
-data = np.random.rand(2, 25)
 
 def setupView(limit):
+    plt = _plt()
     ax = plt.axes(projection="3d")
     ax.set_xlim(-limit, limit)
     ax.set_ylim(-limit, limit)
@@ -113,6 +119,7 @@ class Kinematic:
         return np.array([T0,T1,T2,T3,T4])
 
     def drawLegPoints(self,p):
+        plt = _plt()
         # draw basic position
         plt.plot([x[0] for x in p],[x[2] for x in p],[x[1] for x in p], 'k-', lw=3)
         
@@ -124,6 +131,7 @@ class Kinematic:
 
     #edited by shson98
     def drawLegPair(self,Tl,Tr,Ll,Lr, LEG_FR):
+        plt = _plt()
         Ix=np.array([[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
         self.drawLegPoints([Tl.dot(x) for x in self.calcLegPoints(self.legIK(np.linalg.inv(Tl).dot(Ll)))])
         self.drawLegPoints([Tr.dot(Ix.dot(x)) for x in self.calcLegPoints(self.legIK(Ix.dot(np.linalg.inv(Tr).dot(Lr))))])
@@ -135,6 +143,7 @@ class Kinematic:
         self.thetas[LEG_FR+self.LEG_RIGHT]=np.array(self.legIK(Ix.dot(np.linalg.inv(Tr).dot(Lr))))
 
     def drawRobot(self,Lp,angles,center):
+        plt = _plt()
         (omega,phi,psi)=angles
         (xm,ym,zm)=center
         
@@ -152,6 +161,7 @@ class Kinematic:
 
     # La: Leg Angles
     def drawRobotbyAngles(self,La,angles,center):
+        plt = _plt()
         Ix=np.array([[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
         (omega,phi,psi)=angles
         (xm,ym,zm)=center
@@ -206,13 +216,15 @@ def update_lines(i, Lp, angles):
 
 def animationKinecatics(Lp):
     angles=[0]
+    from matplotlib.animation import FuncAnimation
+    fig = _plt().figure()
     lines_ani = FuncAnimation(fig, update_lines, frames=1000, fargs=(Lp, angles), interval=100)
-    plt.show()
+    _plt().show()
     
     return lines_ani
 
 def plotKinematics():
-    plt.show()
+    _plt().show()
 
 if __name__=="__main__":
     Lp=np.array([[100,-100,100,1], \

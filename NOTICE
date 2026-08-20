@@ -1,0 +1,142 @@
+================================================================================
+SpotMicro 오픈소스 4족보행 로봇의 실측 기반 보행 제어와 강화학습
+팀 KINETIQ · 2026 오픈소스 개발자대회
+================================================================================
+
+본 저작물은 제3자 저작물을 포함합니다. 각 저작물의 라이선스 조건을 따릅니다.
+This product includes work developed by third parties.
+
+--------------------------------------------------------------------------------
+1. 저장소 라이선스 / Repository licence
+--------------------------------------------------------------------------------
+
+  GPL-3.0-or-later.  전문: ./LICENSE
+
+  본 저장소는 GPL-3.0 저작물(SpotMicroAI)의 파생 저작물이므로, 팀이 새로 작성한
+  코드를 포함해 전체가 GPL-3.0-or-later 로 배포됩니다.
+
+  This repository is a derivative work of a GPL-3.0 project. Accordingly the
+  whole repository, including newly authored code, is distributed under
+  GPL-3.0-or-later.
+
+  ※ 소프트웨어와 3D 모델의 라이선스가 다릅니다. 4장을 반드시 확인하십시오.
+
+--------------------------------------------------------------------------------
+2. 계보 / Provenance
+--------------------------------------------------------------------------------
+
+  FlorianWilk/SpotMicroAI                 (GPL-3.0)
+    -> Road-Balance/SpotMicroJetson       (GPL-3.0)
+      -> robertchoi/SpotMicroJetson       (GPL-3.0)
+        -> orocapangyo/SpotMicroJetson    (GPL-3.0)   OROCA 판교 스터디 공유 저장소
+          -> robertchoi/oss_spotmicro     (본 저장소)
+
+  커밋 히스토리에 upstream 원 커밋이 보존되어 있습니다.
+  upstream 원본 README: ./docs/UPSTREAM_README.md
+
+--------------------------------------------------------------------------------
+3. 소프트웨어 — 무엇이 상속이고 무엇이 신규인가
+--------------------------------------------------------------------------------
+
+  본 팀 신규 저작물 (GPL-3.0-or-later)
+
+    rl/                    MuJoCo 모델 생성·검증, 강화학습 환경·학습·평가
+    Common/                서보 매핑, 보행 파라미터, 폰 조작 UI
+    study/                 개발 일지 (3인, 11주)
+    docs/                  하드웨어 문서, 배선도, 데모 미디어
+    STL/kinetiq/           본 팀 설계 3D 파트 (4장 참조)
+
+  upstream 상속 + 본 팀 수정 (GPL-3.0)
+
+    Kinematics/            역기구학. 링크 길이를 실측값으로 정정
+    JetsonNano/            서보 제어. PCA9685 채널 매핑, 펄스폭 캘리브레이션,
+                           Raspberry Pi CM4 대응. 디렉터리명은 upstream 유래이며
+                           현재 대상 보드는 Jetson Nano 가 아닙니다
+    Simulation/            PyBullet 시뮬레이션. 모듈 경로 수정
+
+  순수 upstream 상속 (GPL-3.0 / 4장의 CC BY 3.0)
+
+    urdf/  Images/  Parts/  STL/  STEP_Files/  Common/multiprocess_kb.py 원본
+
+  ※ Images/ 의 데모 GIF 는 upstream(Road-Balance) 팀의 로봇입니다.
+     본 팀 로봇의 미디어는 docs/media/ 에 있습니다.
+
+--------------------------------------------------------------------------------
+4. 3D 모델 / Mechanical design   *** 소프트웨어와 라이선스가 다릅니다 ***
+--------------------------------------------------------------------------------
+
+  대상: STL/, STEP_Files/, Parts/, urdf/ 의 기구 형상 데이터
+
+    "Spotmicro - robot dog" by KDY0523
+    https://www.thingiverse.com/thing:3445283
+    Licence: Creative Commons - Attribution (CC BY 3.0)
+    http://creativecommons.org/licenses/by/3.0/
+    원문 고지: ./STL/LICENSE.txt , ./STL/attribution_card.html
+
+  CC BY 3.0 에 따라 원저작자 표시를 유지합니다. 본 라이선스는 소프트웨어에
+  적용되는 GPL-3.0 과 별개로 위 파일들에 적용됩니다.
+
+  본 팀이 설계한 파트 (STL/kinetiq/)
+
+    서보 테스트용 거치대        독립 창작       -> GPL-3.0-or-later
+    보드·파워 마운팅 플레이트   기존 파트 파생  -> CC BY 3.0 승계
+
+  기존 파트를 수정한 것은 원저작물의 CC BY 3.0 을 승계하고, 독립적으로 새로
+  설계한 것에는 저장소 라이선스를 적용합니다. 상세: ./STL/kinetiq/README.md
+
+--------------------------------------------------------------------------------
+5. 런타임 의존성 / Runtime dependencies
+--------------------------------------------------------------------------------
+
+  버전은 uv.lock 을 정본으로 합니다.
+
+  Package                            Licence        Purpose
+  ---------------------------------  -------------  ------------------------------
+  mujoco                             Apache-2.0     물리 시뮬레이션
+  gymnasium                          MIT            강화학습 환경 인터페이스
+  stable-baselines3                  MIT            PPO 학습
+  torch                              BSD-3-Clause   신경망 학습·추론
+  numpy                              BSD-3-Clause   수치 연산
+  tensorboard                        Apache-2.0     학습 로그 시각화
+  robot-descriptions                 Apache-2.0     로봇 모델 로더
+  cloudpickle                        BSD-3-Clause   병렬 환경 직렬화
+  matplotlib                         PSF-based      기구학 시각화
+  pybullet                           zlib           초기 보행 검증
+
+  로봇 측 (Raspberry Pi CM4)
+  adafruit-circuitpython-servokit    MIT            서보 각도 제어
+  adafruit-circuitpython-pca9685     MIT            PCA9685 PWM 드라이버
+
+  위 라이선스(Apache-2.0, MIT, BSD-3-Clause, zlib, PSF)는 모두 GPL-3.0 과
+  호환되며 본 저장소 배포 조건과 충돌하지 않습니다.
+  All of the above are GPL-3.0 compatible; no licence conflict exists.
+
+--------------------------------------------------------------------------------
+6. 개발 도구 (배포물에 포함되지 않음) / Development-only tooling
+--------------------------------------------------------------------------------
+
+  uv                          Python 환경·의존성 관리
+  Fritzing / Cirkit Designer  배선도 작성
+  ffmpeg                      데모 미디어 변환
+  상용 AI 코딩 보조도구        코드 작성 및 디버깅 보조
+
+    대회 운영규정 제9조 제5항에 따라 활용 사실을 고지합니다. 상세 범위는
+    결과보고서 [붙임2] AI 모델 활용 및 라이선스 기술 명세서에 기재합니다.
+
+--------------------------------------------------------------------------------
+7. 학습된 정책 가중치 / Trained policy weights
+--------------------------------------------------------------------------------
+
+  기반 모델 없이 MuJoCo 환경에서 처음부터 강화학습한 자체 개발 모델입니다.
+  대회 운영규정 제9조 제2항 제3호에 따라, 승인 절차 없이 누구나 접근할 수 있도록
+  본 저장소 checkpoints/ 에 공개합니다.
+
+  Trained from scratch; no base model. Weights are published in this repository
+  so that they can be obtained without any approval step.
+
+--------------------------------------------------------------------------------
+8. 문의 / Contact
+--------------------------------------------------------------------------------
+
+  Team KINETIQ
+  https://github.com/robertchoi/oss_spotmicro

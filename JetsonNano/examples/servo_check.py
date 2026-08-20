@@ -22,7 +22,6 @@
     각 다리 안에서 Lower, Upper, Shoulder 순서.
 """
 import os
-import re
 import readline  # noqa: F401  input() 에서 방향키/백스페이스 편집 활성화
 import sys
 import termios
@@ -34,6 +33,7 @@ import busio
 from adafruit_servokit import ServoKit
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from Common.servo_map import SERVO_OFFSETS
 from Common.servo_oe import OutputEnable, configurePCA
 
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -82,29 +82,15 @@ NAMES = {
 
 ADDR = {id(kit): "0x40", id(kit2): "0x41"}
 
-def _loadOffsets():
-    """servo_controller.py 의 _servo_offsets 를 읽는다.
+# 오프셋은 Common/servo_map.py 한 곳에만 있다. servo_controller.py 도 거기서 읽는다.
+#
+# 예전에는 servo_controller.py 의 소스를 정규식으로 파싱했다. 값이 하드웨어를
+# import 하는 파일 안에 리터럴로 있었기 때문인데, 그 방식은 원본의 표현이 조금만
+# 바뀌어도 (예: 리터럴 -> import) 조용히 [90]*12 로 폴백해 서보를 엉뚱한 곳으로
+# 보낸다. 이제는 그냥 import 한다.
+DEFAULT_OFFSETS = list(SERVO_OFFSETS)
+_OFFSET_SRC = "Common/servo_map.py"
 
-    값을 이 파일에도 적어두면 두 곳이 어긋나므로 원본에서 직접 가져온다.
-    주석 처리된 줄은 건너뛴다.
-    """
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "servo_controller.py")
-    pattern = re.compile(r"^\s*self\._servo_offsets\s*=\s*\[([^\]]*)\]")
-    try:
-        with open(path) as f:
-            for line in f:
-                m = pattern.match(line)
-                if m:
-                    vals = [int(x) for x in m.group(1).split(",")]
-                    if len(vals) == 12:
-                        return vals, path
-    except OSError:
-        pass
-    print("경고: servo_controller.py 에서 _servo_offsets 를 읽지 못했다. 90 으로 시작한다.")
-    return [90] * 12, path
-
-
-DEFAULT_OFFSETS, _OFFSET_SRC = _loadOffsets()
 
 # 각 관절을 어떤 자세에 맞춰야 하는지 (work06.md 5절)
 # 기준 자세는 IK 의 theta=0, 즉 어깨관절부터 발끝까지 하나의 수직 직선이다.
@@ -414,8 +400,8 @@ def show_offsets(offsets, measured):
         print("  아래 배열의 해당 항목은 이 스크립트의 DEFAULT_OFFSETS 값일 뿐이다.")
         print("  그대로 붙여넣으면 다른 실행에서 잰 값을 덮어쓸 수 있으니 주의할 것.")
         print("  전체를 다시 재려면 인덱스 없이:  servo_check.py cal")
-    print("\nservo_controller.py 에 붙여넣을 값:")
-    print(f"self._servo_offsets = {offsets}")
+    print("\nCommon/servo_map.py 에 붙여넣을 값:")
+    print(f"SERVO_OFFSETS = {offsets}")
 
 
 def main():

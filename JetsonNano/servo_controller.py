@@ -3,6 +3,7 @@ sys.path.append("..")
 
 import Kinematics.kinematics as kn
 import numpy as np
+from Common.servo_map import SERVO_OFFSETS
 from Common.servo_oe import OutputEnable, configurePCA
 from adafruit_servokit import ServoKit
 import board
@@ -53,7 +54,10 @@ class Controllers:
         # CM4 이식 후 실측값 (2026-08-15). 이전 Jetson 개체 값: [170,85,90,1,95,90,172,90,90,1,90,95]
         # RR-Lower(idx 9): 혼 이탈 후 삽입부를 갈아 완전 체결하며 5 -> 26 으로 바뀌었다.
         # 스플라인 한 칸만큼 안쪽으로 들어와 가동 한계 여유가 생겼다.
-        self._servo_offsets = [165, 83, 79, 25, 83, 95, 164, 91, 88, 23, 81, 77] #5 Futaba 25kg
+        # 값은 Common/servo_map.py 에 있다. 시뮬레이터도 같은 오프셋을 알아야 하는데
+        # (관절 가동 범위가 여기서 유도된다) 이 파일은 adafruit/board 를 import 하므로
+        # 로봇 밖에서 읽을 수 없다. 두 곳에 같은 표를 두면 반드시 어긋난다.
+        self._servo_offsets = list(SERVO_OFFSETS)
 
         # self._servo_offsets = [179, 88, 81, 13, 87, 88, 179, 96, 91, 26, 81, 81]
         # self._servo_offsets = [150, 81, 79, 1, 95, 105, 164, 81, 82, 1, 80, 81]

@@ -44,6 +44,12 @@ button:active{background:#4a5261}
 .sub{font-weight:400;color:#9aa0aa;font-size:13px}
 .st{background:#22252c;border-radius:10px;padding:10px;font-size:13px;color:#9aa0aa}
 .st b{color:#e8e8ea;font-variant-numeric:tabular-nums}
+.sw{position:fixed;right:10px;bottom:10px;background:#22252c;border:1px solid #333842;
+ border-radius:12px;padding:8px 12px;text-align:right;cursor:pointer;
+ box-shadow:0 2px 12px rgba(0,0,0,.5);touch-action:manipulation;z-index:9}
+.sw .t{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.05}
+.sw .d{font-size:11px;color:#7d838d;margin-top:2px}
+.sw.run .t{color:#6bc47d}
 </style></head><body>
 
 <h2>다리별 트림 (mm)</h2>
@@ -105,6 +111,11 @@ button:active{background:#4a5261}
  전진 <b id="spd">-</b>mm/s <span style="font-size:11px">이론값 — 실제 속도는 줄자로 재야 합니다</span>
 </div>
 
+<div class="sw" id="sw" onclick="swReset()">
+ <div class="t" id="swt">0.0</div>
+ <div class="d" id="swd">탭 = 0 부터</div>
+</div>
+
 <script>
 const L=["FL","FR","RL","RR"];
 // 슬라이더 -> 표시 소수 자릿수. 범위와 step 은 서버가 /state 로 내려준다.
@@ -118,9 +129,33 @@ async function post(b){
  try{const r=await fetch("/cmd",{method:"POST",body:JSON.stringify(b)});draw(await r.json());}
  catch(e){}
 }
-const cmd=post;
+// 스톱워치. 20초 주행 거리를 재려면 로봇을 보면서 시간을 봐야 하는데,
+// 별도 앱을 띄우면 화면을 오가게 된다. 조작하는 손에 시계가 같이 있어야 한다.
+//
+// 전진/후진을 누르면 시작하고 정지에서 멈춘다. 다만 보폭을 -70 까지 올리는
+// 동안(w 7회) 이미 걷고 있으므로 그 구간이 섞인다. 탭하면 0 부터 다시 센다 -
+// 보폭을 다 올린 뒤 한 번 탭하는 것이 실제 측정 시작점이다.
+let swT0=null, swHold=0, lastState=null;
+function swStart(){ if(swT0===null){ swT0=Date.now(); swHold=0; } }
+function swStop(){ if(swT0!==null){ swHold=Date.now()-swT0; swT0=null; } }
+function swReset(){ swT0=Date.now(); swHold=0; }
+setInterval(()=>{
+ const ms = swT0!==null ? Date.now()-swT0 : swHold;
+ const sec = ms/1000;
+ document.getElementById("swt").textContent=sec.toFixed(1);
+ document.getElementById("sw").classList.toggle("run", swT0!==null);
+ let d="탭 = 0 부터";
+ if(lastState){
+  // 이론 이동거리. 실측 거리와의 차이가 곧 미끄러짐이다.
+  const v=Math.abs(lastState.IDstepLength)/lastState.Tt*1000;
+  d=`이론 ${(v*sec/10).toFixed(0)}cm  ·  ${v.toFixed(0)}mm/s`;
+ }
+ document.getElementById("swd").textContent=d;
+},100);
+
+const cmd=b=>{ if(b&&b.stop) swStop(); return post(b); };
 const leg=(n,d)=>post({leg:n,delta:d});
-const step=k=>post({key:k});
+const step=k=>{ if(k==="w"||k==="s") swStart(); return post({key:k}); };
 
 function draw(s){
  if(!s||!s.IDtrim)return;
@@ -143,6 +178,8 @@ function draw(s){
  document.getElementById("sw").textContent=(s.IDstepWidth*2).toFixed(0);
  document.getElementById("sa").textContent=s.IDstepAlpha.toFixed(0);
  document.getElementById("mode").textContent=s.StartStepping?"보행중":"정지";
+ lastState=s;
+ if(!s.StartStepping) swStop();   // 로봇이 멈추면 시계도 멈춘다 (space, 넘어짐 등)
  for(const k in SLIDERS){
   const el=document.getElementById(k);
   if(s.ranges&&s.ranges[k]){el.min=s.ranges[k][0];el.max=s.ranges[k][1];}

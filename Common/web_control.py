@@ -84,7 +84,8 @@ button:active{background:#4a5261}
 <div class="row"><label>스윙 비율</label>
  <input type="range" id="duty" step="0.01"><span class="rv" id="dutyv"></span></div>
 <div class="hint">주기 중 발이 떠 있는 비율. 이것만 네발지지를 정한다 (= 1 − 2 × 비율).
- <b>높이 들려면 비율과 주기를 같이 올린다</b> — 주기를 그대로 두고 비율만 올리면 주저앉는다.</div>
+ <b>올리지 마세요.</b> 0.21(네발지지 58%)에서 뒤로 넘어진 기록이 있습니다.
+ 발을 높이 들려면 이 값이 아니라 <b>주기</b>를 올리세요.</div>
 
 <h2>보행</h2>
 <div class="pad">
@@ -168,6 +169,7 @@ function draw(s){
  if(s.ikFail) msg="IK 도달 불가 - 서보 명령이 중단됩니다. 몸통을 낮추거나 보폭을 줄이세요.";
  else if(s.blocked&&s.blocked.length) msg="범위 초과로 전송 못 한 관절이 있습니다 ("+s.blocked.length+"개). 그 관절은 얼어붙습니다.";
  else if(gap>s.Sh*s.twistRatio) msg="대각 차이가 큽니다 ("+gap.toFixed(1)+"mm). 높은 대각 쌍이 접지하지 못할 수 있습니다.";
+ else if(s.duty>0.175) msg="네발지지 "+(Math.max(0,1-2*s.duty)*100).toFixed(0)+"% - 뒤로 넘어질 수 있습니다. 발을 높이 들려면 스윙비율이 아니라 주기를 올리세요.";
  w.style.display=msg?"block":"none";
  w.textContent=msg;
  const t=s.IDtrim;
@@ -194,7 +196,10 @@ function draw(s){
  document.getElementById("slew").textContent=slew.toFixed(0);
  document.getElementById("spd").textContent=(Math.abs(s.IDstepLength)/s.Tt*1000).toFixed(0);
  // 위험 구간을 색으로 알린다. 545°/s 는 DS3235 무부하 정격.
- document.getElementById("sup").style.color=sup<50?"#e0a030":"#e8e8ea";
+ // 네발지지 임계값은 실측이다. 50% 미만에서만 경고하다가 58% 에서 뒤로 넘어졌다
+ // (2026-08-20, 스윙비율 0.21). work11 6.16.1 은 50% 에서 주저앉았다고 기록한다.
+ // IMU 가 없어 로봇은 넘어진 것을 알지 못하므로 화면이 미리 알려야 한다.
+ document.getElementById("sup").style.color=sup<55?"#e05050":sup<65?"#e0a030":"#e8e8ea";
  document.getElementById("slew").style.color=slew>545?"#e05050":slew>490?"#e0a030":"#e8e8ea";
 }
 for(const k in SLIDERS){

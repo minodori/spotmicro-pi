@@ -1,3 +1,6 @@
+> **초기 검증용 PyBullet 시뮬레이션입니다 (upstream).**
+> 강화학습은 `rl/` 의 MuJoCo 모델을 사용합니다.
+
 ## SpotMicroAI Pybullet Simulation
 
 ![auto_gait](https://user-images.githubusercontent.com/12381733/95225571-e64d1680-0836-11eb-9077-2ad557a4aaf2.gif)

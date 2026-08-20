@@ -1,3 +1,7 @@
+> **디렉터리명은 upstream 유래입니다. 현재 대상 보드는 Raspberry Pi Compute Module 4 입니다.**
+> Jetson Nano -> RPi 5 -> CM4 전환 경위는 [work05](../study/minho/work05.md),
+> [work07](../study/minho/work07.md), [work11](../study/minho/work11.md) 참조.
+
 ## SpotMicroAI for JetsonNano
 
 TODO: Update this documentation

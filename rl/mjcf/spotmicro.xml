@@ -1,0 +1,107 @@
+<mujoco model="spotmicro">
+  <!-- rl/gen_mjcf.py 가 Kinematics/kinematics.py 에서 생성한다. 직접 고치지 말 것. -->
+  <!-- l1=56 l2=20 l3=125 l4=138 L=185 W=78 (mm, work11 §6.25 실측) -->
+  <compiler angle="radian" autolimits="true"
+            inertiafromgeom="auto" inertiagrouprange="0 0"/>
+  <option timestep="0.004" iterations="10" solver="Newton" cone="elliptic"/>
+
+  <default>
+    <geom group="0" condim="3" friction="0.9 0.02 0.001"/>
+    <joint type="hinge" armature="0.008" damping="0.05" frictionloss="0.05"/>
+    <position kp="25" kv="0.315" forcerange="-3.0 3.0"/>
+  </default>
+
+  <worldbody>
+    <body name="trunk" pos="0 0 0.2500">
+      <freejoint name="root"/>
+      <inertial pos="-0.0470 0 0" mass="1.18" diaginertia="0.000952 0.003719 0.003964"/>
+      <geom name="trunk" type="box" size="0.0925 0.0390 0.0300" mass="1.18"/>
+      <site name="imu" pos="0 0 0"/>
+
+      <body name="FL_hip" pos="0.0925 0.0390 0">
+        <joint name="FL_shoulder" axis="1 0 0" range="-1.379 1.763"/>
+        <geom name="FL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
+        <body name="FL_upper" pos="0 0.0560 -0.0200">
+          <joint name="FL_leg" axis="0 1 0" range="-1.449 1.693"/>
+          <geom name="FL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1250" size="0.014"/>
+          <body name="FL_lower" pos="0 0 -0.1250">
+            <joint name="FL_foot" axis="0 1 0" range="-2.880 0.262"/>
+            <geom name="FL_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1380" size="0.011"/>
+            <geom name="FL_foot" type="sphere" mass="0.005" pos="0 0 -0.1380" size="0.012" solref="0.015 1"/>
+            <site name="FL_foot" type="sphere" size="0.018" pos="0 0 -0.1380"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="FR_hip" pos="0.0925 -0.0390 0">
+        <joint name="FR_shoulder" axis="1 0 0" range="-1.658 1.484"/>
+        <geom name="FR_hip" type="capsule" mass="0.1" fromto="0 0 0 0 -0.0560 0" size="0.018"/>
+        <body name="FR_upper" pos="0 -0.0560 -0.0200">
+          <joint name="FR_leg" axis="0 1 0" range="-1.693 1.449"/>
+          <geom name="FR_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1250" size="0.014"/>
+          <body name="FR_lower" pos="0 0 -0.1250">
+            <joint name="FR_foot" axis="0 1 0" range="-2.705 0.436"/>
+            <geom name="FR_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1380" size="0.011"/>
+            <geom name="FR_foot" type="sphere" mass="0.005" pos="0 0 -0.1380" size="0.012" solref="0.015 1"/>
+            <site name="FR_foot" type="sphere" size="0.018" pos="0 0 -0.1380"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="RL_hip" pos="-0.0925 0.0390 0">
+        <joint name="RL_shoulder" axis="1 0 0" range="-1.606 1.536"/>
+        <geom name="RL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
+        <body name="RL_upper" pos="0 0.0560 -0.0200">
+          <joint name="RL_leg" axis="0 1 0" range="-1.588 1.553"/>
+          <geom name="RL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1250" size="0.014"/>
+          <body name="RL_lower" pos="0 0 -0.1250">
+            <joint name="RL_foot" axis="0 1 0" range="-2.862 0.279"/>
+            <geom name="RL_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1380" size="0.011"/>
+            <geom name="RL_foot" type="sphere" mass="0.005" pos="0 0 -0.1380" size="0.012" solref="0.015 1"/>
+            <site name="RL_foot" type="sphere" size="0.018" pos="0 0 -0.1380"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="RR_hip" pos="-0.0925 -0.0390 0">
+        <joint name="RR_shoulder" axis="1 0 0" range="-1.798 1.344"/>
+        <geom name="RR_hip" type="capsule" mass="0.1" fromto="0 0 0 0 -0.0560 0" size="0.018"/>
+        <body name="RR_upper" pos="0 -0.0560 -0.0200">
+          <joint name="RR_leg" axis="0 1 0" range="-1.728 1.414"/>
+          <geom name="RR_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1250" size="0.014"/>
+          <body name="RR_lower" pos="0 0 -0.1250">
+            <joint name="RR_foot" axis="0 1 0" range="-2.740 0.401"/>
+            <geom name="RR_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1380" size="0.011"/>
+            <geom name="RR_foot" type="sphere" mass="0.005" pos="0 0 -0.1380" size="0.012" solref="0.015 1"/>
+            <site name="RR_foot" type="sphere" size="0.018" pos="0 0 -0.1380"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="FL_shoulder" joint="FL_shoulder"/>
+    <position name="FL_leg" joint="FL_leg"/>
+    <position name="FL_foot" joint="FL_foot"/>
+    <position name="FR_shoulder" joint="FR_shoulder" kp="25" kv="0.263" forcerange="-2.5 2.5"/>   <!-- Futaba 25kg -->
+    <position name="FR_leg" joint="FR_leg"/>
+    <position name="FR_foot" joint="FR_foot"/>
+    <position name="RL_shoulder" joint="RL_shoulder"/>
+    <position name="RL_leg" joint="RL_leg"/>
+    <position name="RL_foot" joint="RL_foot"/>
+    <position name="RR_shoulder" joint="RR_shoulder"/>
+    <position name="RR_leg" joint="RR_leg"/>
+    <position name="RR_foot" joint="RR_foot"/>
+  </actuator>
+
+  <sensor>
+    <gyro name="gyro" site="imu"/>
+    <framequat name="orient" objtype="site" objname="imu"/>
+    <framelinvel name="base_vel" objtype="site" objname="imu"/>
+    <touch name="FL_touch" site="FL_foot"/>
+    <touch name="FR_touch" site="FR_foot"/>
+    <touch name="RL_touch" site="RL_foot"/>
+    <touch name="RR_touch" site="RR_foot"/>
+  </sensor>
+</mujoco>

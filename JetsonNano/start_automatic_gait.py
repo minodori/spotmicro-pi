@@ -20,6 +20,7 @@ import spotmicroai
 import servo_controller
 
 from multiprocessing import Process
+from Common.gait_params import gaitPhases, supportRatio
 from Common.multiprocess_kb import (KeyInterrupt, keyboardAvailable,
                                     trimModes, TWIST_WARN_RATIO)
 from Common.web_control import startWebControl
@@ -120,6 +121,13 @@ def main(id, command_status, keyInputs=None):
         height = result_dict.get('height', 110.0)
         trotting.Sh = result_dict.get('Sh', 20.0)
 
+        # 궤적 타이밍. 주기 Tt 와 스윙 비율 duty 로 받아 t1/t3 으로 환산한다.
+        # t1/t3 을 따로 노출하면 하나만 만졌을 때 전진 속도와 네발지지 비율이 같이
+        # 움직여 무엇이 원인인지 알 수 없다 (work11 6.16.1 이 그 함정이었다).
+        # 보행 중이 아니어도 매 루프 갱신한다 - 상태판이 현재 값을 보여야 한다.
+        duty = result_dict.get('duty', 0.143)
+        trotting.t1, trotting.t3 = gaitPhases(result_dict)
+
         # 다리별 y 트림 (조립 오차 보정). 보행 중에는 positions() 안에서 적용되고
         # 정지 자세는 고정 배열이라 여기서 직접 더한다. 순서 0 FL, 1 FR, 2 RL, 3 RR
         trim = result_dict.get('IDtrim', [0.0] * 4)
@@ -182,6 +190,19 @@ def main(id, command_status, keyInputs=None):
         print(f" 앞뒤 {pitchT:+.1f}   좌우 {rollT:+.1f}   대각 {twistT:+.1f}"
               f"  (대각차 {twistGap:.1f}mm){warn}")
         print(f" 몸통높이 {height:.0f} (t 높임 / g 낮춤)    발들어올림 Sh {trotting.Sh:.0f} (r/f)")
+        # 주기와 스윙 비율. 이 둘이 "얼마나 높이 드느냐" 와 "안 넘어지느냐" 를 정한다.
+        #   네발지지가 낮을수록 대각 두 발로 버티는 시간이 길어진다. IMU 가 없으므로
+        #   50% 아래로 내려가면 주저앉기 시작한다 (work11 6.16.1).
+        #   슬루율은 무릎이 요구받는 각속도다. DS3235 무부하 정격이 545도/s 다.
+        support = supportRatio(duty) * 100
+        slew = trotting.Sh * math.pi / (trotting.t3 / 1000.0) if trotting.t3 else 0.0
+        speed = abs(result_dict['IDstepLength']) / (trotting.t1 + trotting.t3) * 1000
+        supportWarn = "  <-- 낮다. 대각 두 발로 버티는 시간이 길다" if support < 50 else ""
+        slewWarn = "  <-- 정격 초과" if slew > 545 else ""
+        print(f" 주기 {trotting.t1 + trotting.t3:.0f}ms (c 느리게 / v 빠르게)"
+              f"   스윙비율 {duty:.2f} (b 늘림 / n 줄임)   t1/t3 {trotting.t1:.0f}/{trotting.t3:.0f}")
+        print(f" 네발지지 {support:.0f}%{supportWarn}")
+        print(f" 무릎슬루 {slew:.0f}도/s{slewWarn}      전진속도 {speed:.0f}mm/s")
         print(" y/h 앞뒤기울기   u/j 좌우기울기   p 트림리셋   space 정지   Ctrl-C 종료")
         if ikFail:
             print(" !! IK 도달 불가 - 서보 명령 중단. 몸통을 낮추거나(g) 보폭을 줄여라")

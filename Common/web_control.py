@@ -72,6 +72,13 @@ button:active{background:#4a5261}
 <div class="row"><label>발 들어올림</label>
  <input type="range" id="Sh" step="1"><span class="rv" id="Shv"></span></div>
 <div class="hint">스윙 중 발이 지면에서 뜨는 높이. 작으면 발이 끌리고, 크면 무릎이 궤적을 못 따라간다.</div>
+<div class="row"><label>주기</label>
+ <input type="range" id="Tt" step="50"><span class="rv" id="Ttv"></span></div>
+<div class="hint">한 걸음 주기(ms). 전진 속도 = 보폭 / 주기 이므로 이것만 속도를 정한다.</div>
+<div class="row"><label>스윙 비율</label>
+ <input type="range" id="duty" step="0.01"><span class="rv" id="dutyv"></span></div>
+<div class="hint">주기 중 발이 떠 있는 비율. 이것만 네발지지를 정한다 (= 1 − 2 × 비율).
+ <b>높이 들려면 비율과 주기를 같이 올린다</b> — 주기를 그대로 두고 비율만 올리면 주저앉는다.</div>
 
 <h2>보행</h2>
 <div class="pad">
@@ -89,16 +96,18 @@ button:active{background:#4a5261}
  <button onclick="step('q')">↺ 좌회전</button>
  <button onclick="step('e')">우회전 ↻</button>
 </div>
-<div class="hint2">누를 때마다 누적된다. 전후 10mm, 좌우 10mm, 회전 3도.
- 회전은 스윙 구간에 보정이 빠져 있어 발이 튄다 (3도당 약 4mm). 작게 쓸 것.</div>
+<div class="hint2">누를 때마다 누적된다. 전후 10mm, 좌우 10mm, 회전 3도.</div>
 
 <div class="st">
  보폭 <b id="sl">-</b>mm &nbsp; 좌우 <b id="sw">-</b>mm &nbsp; 회전 <b id="sa">-</b>°<br>
- <b id="mode">-</b> &nbsp; 대각 차이 <b id="spread">-</b>mm
+ <b id="mode">-</b> &nbsp; 대각 차이 <b id="spread">-</b>mm<br>
+ 네발지지 <b id="sup">-</b>% &nbsp; 무릎슬루 <b id="slew">-</b>°/s &nbsp; 전진 <b id="spd">-</b>mm/s
 </div>
 
 <script>
 const L=["FL","FR","RL","RR"];
+// 슬라이더 -> 표시 소수 자릿수. 범위와 step 은 서버가 /state 로 내려준다.
+const SLIDERS={height:0,Sh:0,Tt:0,duty:2};
 document.getElementById("legs").innerHTML=L.map((n,i)=>
  `<div class="leg"><div class="n">${n}</div><div class="v" id="t${i}">0</div>
   <button onclick="leg('${n}',1)">▲</button>
@@ -133,16 +142,25 @@ function draw(s){
  document.getElementById("sw").textContent=(s.IDstepWidth*2).toFixed(0);
  document.getElementById("sa").textContent=s.IDstepAlpha.toFixed(0);
  document.getElementById("mode").textContent=s.StartStepping?"보행중":"정지";
- for(const k of ["height","Sh"]){
+ for(const k in SLIDERS){
   const el=document.getElementById(k);
   if(s.ranges&&s.ranges[k]){el.min=s.ranges[k][0];el.max=s.ranges[k][1];}
   if(document.activeElement!==el)el.value=s[k];
-  document.getElementById(k+"v").textContent=(+s[k]).toFixed(0);
+  document.getElementById(k+"v").textContent=(+s[k]).toFixed(SLIDERS[k]);
  }
+ // 파생값. 슬라이더를 움직이는 동안 이게 같이 움직여야 무엇을 하고 있는지 보인다.
+ const t3=s.Tt*s.duty, sup=Math.max(0,1-2*s.duty)*100;
+ const slew=t3>0?s.Sh*Math.PI/(t3/1000):0;
+ document.getElementById("sup").textContent=sup.toFixed(0);
+ document.getElementById("slew").textContent=slew.toFixed(0);
+ document.getElementById("spd").textContent=(Math.abs(s.IDstepLength)/s.Tt*1000).toFixed(0);
+ // 위험 구간을 색으로 알린다. 545°/s 는 DS3235 무부하 정격.
+ document.getElementById("sup").style.color=sup<50?"#e0a030":"#e8e8ea";
+ document.getElementById("slew").style.color=slew>545?"#e05050":"#e8e8ea";
 }
-for(const k of ["height","Sh"]){
+for(const k in SLIDERS){
  document.getElementById(k).addEventListener("input",e=>{
-  document.getElementById(k+"v").textContent=e.target.value;
+  document.getElementById(k+"v").textContent=(+e.target.value).toFixed(SLIDERS[k]);
   post({param:k,value:+e.target.value});
  });
 }

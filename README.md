@@ -16,20 +16,45 @@
 ## 무엇을 발견했나
 
 공개된 SpotMicro 코드를 그대로 따라가도 로봇이 제대로 걷지 않습니다.
-원인은 소프트웨어가 아니라 **모델이 실물과 달랐던 것**이었습니다.
+원인은 **한 저장소 안에 서로 다른 로봇이 세 벌 있었다는 것**이었습니다.
 
-| 기구 파라미터 | 공개 코드 | 실측 | 오차 |
-|---|---:|---:|---:|
-| 대퇴 `l3` | 100 | **125** | +25% |
-| 하퇴 `l4` | 100 | **138** | +38% |
-| **다리 전체** | 200 | **263** | **+31%** |
-| 앞뒤 어깨축 `L` | 140 | **185** | +32% |
+`Simulation/` 은 한 프로세스에서 이 세 가지를 동시에 쓰고 있었습니다.
 
-역기구학이 계산한 발끝 위치 자체가 틀려 있었으므로, 그 위에서 찾은 보행 파라미터는
-전부 오차를 우회하는 보정이었습니다. 치수를 바로잡자 **좌우 트림 보정 0 으로
-전진**했습니다.
+| 무엇이 | L | W | 대퇴 | 하퇴 |
+|---|---:|---:|---:|---:|
+| PyBullet 이 화면에 띄운 로봇 (URDF) | 186 | 72 | 120.4 | 135 |
+| 발끝 목표 좌표를 만드는 코드 | 140 | **120** | — | — |
+| 관절 각도를 계산하는 역기구학 | 140 | 75 | **100** | **100** |
 
-같은 SpotMicro 를 만드는 누구에게나 그대로 적용되는 결과입니다.
+**URDF 로봇을 띄워놓고 전혀 다른 로봇의 역기구학으로 관절을 명령하고 있었습니다.**
+역기구학이 계산한 발끝 위치가 애초에 틀렸으므로, 그 위에서 조정한 보행 파라미터는
+보행을 좋게 만든 것이 아니라 그 오차를 우회하는 보정이었습니다.
+
+`l3=l4=100` 이라는 값의 출처도 확인했습니다. upstream(FlorianWilk)은 `120/155` 였고,
+이 값은 2020-10-03 커밋 `d2c3883` 에서 바뀐 것입니다 — 커밋 메시지는
+*"Folder ordered, Useless Images deleted, keyborad controller done"* 으로, 기구 치수를
+바꾼 의도가 기록되어 있지 않습니다.
+
+### 그래서 어긋날 수 없는 구조로 바꿨습니다
+
+치수를 실측해 한 곳에 모으고, **시뮬레이션 모델을 그 상수에서 생성**합니다.
+URDF 를 변환하는 것이 아니라 숫자에서 만들어내므로, 역기구학과 시뮬레이터가
+같은 상수를 import 합니다. 한쪽만 고쳐 어긋나는 일이 구조적으로 불가능합니다.
+
+```
+Kinematics/kinematics.py   실측 기구 상수 (단일 출처)
+        │
+        ├──→ 역기구학 (실물 제어)
+        └──→ rl/gen_mjcf.py ──→ rl/mjcf/spotmicro.xml (시뮬레이션)
+                                         │
+                             rl/validate_mjcf.py 가 8개 게이트로 검증
+```
+
+치수를 바로잡고 지지 다각형을 무게중심에 맞추자 **좌우 트림 보정 없이 전진**했습니다.
+
+접지 문제도 부품비 없이 해결했습니다. 초기에는 종이박스와 카펫 양쪽에서 발이
+미끄러졌으나, 발바닥에 3 mm 미끄럼 방지 패드를 붙이자 **실측 이동 거리가 이론값의
+100%** 가 되었습니다. 시뮬레이션 모델도 발 구체의 마찰계수 0.9 로 이를 반영합니다.
 
 ---
 
@@ -142,11 +167,19 @@ upstream 원본 README 는 [`docs/UPSTREAM_README.md`](docs/UPSTREAM_README.md) 
 
 **Measurement-grounded locomotion and reinforcement learning for the low-cost SpotMicro quadruped.**
 
-The published SpotMicro kinematic model disagreed with the assembled robot — the legs
-were 31% longer than the code assumed — so the inverse kinematics computed the wrong
-foot positions and every gait parameter tuned on top of it was compensating for that
-error. Measuring the machine and correcting the model produced a robot that walks with
-zero lateral trim.
+This repository contained three different robots at once. PyBullet loaded a URDF with a
+186 mm body and 120/135 mm leg links, the code that produced foot targets assumed 140 and
+120, and the inverse kinematics solving for joint angles used 140/75 with 100/100 links.
+The simulator was showing one robot while being commanded by the kinematics of another,
+so the computed foot positions were wrong before any tuning began - and every gait
+parameter found on top of that was compensating for the discrepancy rather than improving
+the gait.
+
+The fix was structural rather than a corrected constant. Measured dimensions now live in
+one module, and the simulation model is **generated from them** instead of converted from
+URDF, so the inverse kinematics and the simulator import the same numbers and cannot drift
+apart. Eight gates check the generated model before any training runs; the strictest
+compares forward kinematics between the two and requires agreement to 0.0000 mm.
 
 On that corrected model, a walking policy is trained in **MuJoCo** and targets a
 **Raspberry Pi Compute Module 4** driving twelve hobby position servos over two PCA9685

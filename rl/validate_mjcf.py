@@ -15,9 +15,9 @@ sys.path.insert(0, os.path.dirname(HERE))
 from Kinematics.kinematics import Kinematic                    # noqa: E402
 from Kinematics.kinematicMotion import TrottingGait            # noqa: E402
 from rl.fk_mapping import solve, LEGS, JOINTS                  # noqa: E402
+from rl.model_api import STAND_HEIGHT, standingTrunkHeight    # noqa: E402
 
 TOTAL_MASS = 2.20
-STAND_HEIGHT = 110.0          # gait_params 기본값
 results = []
 
 
@@ -85,7 +85,9 @@ for _ in range(int(4.0 / model.opt.timestep)):
 
 z = float(data.qpos[2])
 ok = np.isfinite(data.qpos).all() and 0.10 < z < 0.35
-gate("5. 기립 안정 (5cm 낙하)", ok, f"4초 후 몸통 {z*1000:.0f}mm")
+want = standingTrunkHeight() * 1000
+gate("5. 기립 안정 (5cm 낙하)", ok and abs(z*1000 - want) < 15,
+     f"4초 후 몸통 {z*1000:.0f}mm (명령 {want:.0f}, 처짐 {want - z*1000:+.0f})")
 
 # 무게중심 — 트롯 안정성을 지배하는 값이라 하중배분보다 이걸 직접 본다.
 # 주기의 28.6% 를 대각선 두 발로만 버티고, 그때 지지면은 두 발을 잇는 선이다.

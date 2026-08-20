@@ -31,8 +31,8 @@ JOINT_ORDER = tuple(f'{leg}_{j}' for leg in LEGS for j in JOINTS)
 MJCF_SIGN = {'FL': (+1, -1, -1), 'FR': (-1, -1, -1),
              'RL': (+1, -1, -1), 'RR': (-1, -1, -1)}
 
-# 기립 자세의 몸통 높이. Common/gait_params.py 의 기본값과 같다 (조절 범위 60~130).
-STAND_HEIGHT = 110.0
+# 기립 자세의 몸통 높이. Common/gait_params.py 의 기본값과 같다 (조절 범위 60~105).
+STAND_HEIGHT = 95.0
 
 
 def jointSigns():

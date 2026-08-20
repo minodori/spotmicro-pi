@@ -104,8 +104,8 @@ def build(kin=None):
     l1, l2, l3, l4 = k.l1 * MM, k.l2 * MM, k.l3 * MM, k.l4 * MM
     L, W = k.L * MM, k.W * MM
 
-    # 기립 높이. height=110 에서 어깨축~발바닥이 140+110=250mm 다 (gait_params 주석).
-    stand = (140 + 110) * MM
+    # 기립 높이. height=95 에서 어깨축~발바닥이 140+95=235mm 다 (gait_params 주석).
+    stand = (140 + 95) * MM
 
     out = []
     a = out.append

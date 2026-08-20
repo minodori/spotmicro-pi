@@ -85,6 +85,10 @@ class TrottingGait:
         # 개루프에서는 그 구간에 무릎 하중이 두 배가 되어 밀리며 주저앉는다.
         # t3 만 400 으로 올렸다가 이 비율이 71.8% -> 50.2% 로 떨어져 주저앉았다.
         # t3 를 늘릴 때는 t1 을 반드시 같이 늘릴 것.
+        #
+        # 그래서 이제 이 둘을 직접 만지지 않는다. 제어 루프가 매 주기
+        # gait_params.gaitPhases() 로 Tt(주기)/duty(스윙 비율) 에서 환산해 넣는다.
+        # 아래 값은 그 기본값(Tt 1400, duty 0.143)과 같고, 환산 없이 쓸 때의 값이다.
         self.t1=1200
         self.t2=0
         self.t3=200
@@ -96,6 +100,10 @@ class TrottingGait:
         # DS3235 무부하 정격 545도/s (0.11s/60도). 링크 길이를 실측값으로 바로잡으면서
         # 같은 수직 이동에 필요한 무릎 회전이 줄어 여유가 늘었다
         # (구 모델에서는 Sh=40 이 739도/s 로 정격을 넘었다).
+        #
+        # 위 표는 t3=200 일 때다. 슬루율은 Sh 가 아니라 Sh/t3 이 정하므로 t3 를 늘리면
+        # 같은 Sh 가 더 싸진다 — Sh=30/t3=400 은 188도/s 로 지금(250)보다도 낮다.
+        # 그래서 Sh 상한을 40 까지 열어두되, 올릴 때는 duty 를 같이 올려야 한다.
         #
         # 순 전진 = |Sl| x (스윙 중 발이 실제로 떠 있는 비율) 이다. 발이 전혀 안 뜨면
         # 스탠스와 스윙이 정확히 상쇄되어 순 이동이 0 이 된다. 처짐이 Sh 를 잡아먹지
@@ -132,6 +140,27 @@ class TrottingGait:
 
         self.Rc=[-50,0,0,1] # rotation center
 
+        # 보행 위상 (0~1). 절대시각의 나머지연산 대신 이걸 누적한다.
+        # 주기 Tt 를 실시간으로 바꾸는 순간 (t*1000)%Tt 는 값이 튄다 —
+        # 예를 들어 t=10s 에서 Tt 를 1400 -> 1500 으로 올리면 td 가 600 -> 1000 으로
+        # 건너뛰어 다리가 접지 도중에 스윙으로 순간이동한다. 위상을 누적하면
+        # Tt 가 바뀌어도 다리는 있던 자리에 그대로 있고 속도만 달라진다.
+        self._phase=0.0
+        self._lastT=None
+
+
+    def yawRotate(self,Lp,psiDeg):
+        """발끝을 몸통 y 축(연직) 둘레로 psiDeg 만큼 돌린다. 제자리 회전 보행에 쓴다.
+
+        접지와 스윙이 같은 함수를 쓰게 하려고 뽑아냈다. 둘 중 한쪽에만 있으면
+        구간 전환점에서 발이 순간이동한다.
+        """
+        psi=math.pi/180*psiDeg
+        Ry=np.array([[np.cos(psi),0,np.sin(psi),0],
+                     [0,1,0,0],
+                     [-np.sin(psi),0,np.cos(psi),0],[0,0,0,1]])
+        #Tlm = np.array([[0,0,0,-self.Rc[0]],[0,0,0,-self.Rc[1]],[0,0,0,-self.Rc[2]],[0,0,0,0]])
+        return Ry.dot(Lp)
 
     """
     calculates the Lp - LegPosition for the configured gait for time t and original Lp of x,y,z
@@ -152,13 +181,8 @@ class TrottingGait:
             tp=td/self.t1   # 1/(t1/td) 와 동일하되 td==0 에서 ZeroDivisionError 가 나지 않는다
             diffLp=endLp-startLp
             curLp=startLp+diffLp*tp
-            psi=-((math.pi/180*self.Sa)/2)+(math.pi/180*self.Sa)*tp
-            Ry = np.array([[np.cos(psi),0,np.sin(psi),0],
-                    [0,1,0,0],
-                    [-np.sin(psi),0,np.cos(psi),0],[0,0,0,1]])
-            #Tlm = np.array([[0,0,0,-self.Rc[0]],[0,0,0,-self.Rc[1]],[0,0,0,-self.Rc[2]],[0,0,0,0]])
-            curLp=Ry.dot(curLp)
-            return curLp
+            # 접지 중 몸통이 Sa 만큼 돌아야 하므로 발은 -Sa/2 에서 +Sa/2 로 쓸린다.
+            return self.yawRotate(curLp,-self.Sa/2.0+self.Sa*tp)
         elif(t<self.t0+self.t1+self.t2):
             return endLp
         elif(t<self.t0+self.t1+self.t2+self.t3): # Lift foot
@@ -166,6 +190,11 @@ class TrottingGait:
             tp=td/self.t3   # 위와 동일한 이유
             diffLp=startLp-endLp
             curLp=endLp+diffLp*tp
+            # 스윙에도 같은 회전을 적용한다. 예전에는 접지 구간에만 있어서, 접지는
+            # +Sa/2 에서 끝나는데 스윙은 회전 없는 점에서 시작해 전환점마다 발이 튀었다
+            # (Sa=3 에서 3.8mm, Sa=9 에서 11mm - 발 들어올림 20mm 에 육박한다).
+            # 스윙은 되돌아오는 구간이므로 +Sa/2 -> -Sa/2 로, 접지와 반대 방향이다.
+            curLp=self.yawRotate(curLp,self.Sa/2.0-self.Sa*tp)
             # 발 들어올림 프로파일.
             # sin(pi*tp) 는 tp=1(착지)에서 하강 속도가 최대가 되어 발이 꽂힌다.
             # Sh=20/t3=200 에서 314mm/s, Sh=40 이면 628mm/s 로 지면을 때린다.
@@ -177,6 +206,21 @@ class TrottingGait:
             
     def stepLength(self,len):
         self.Sl=len
+
+    def advancePhase(self,t,Tt):
+        """경과 시각 t(초) 로부터 위상을 누적해 0~Tt 범위의 주기 내 시각을 돌려준다.
+
+        보행을 멈췄다 다시 시작하면 dt 가 몇 초씩 벌어진다. 그대로 더하면 위상이
+        임의의 곳으로 튀므로, 한 주기를 넘는 간격은 "멈춰 있었다" 로 보고 버린다.
+        멈춘 자리에서 이어서 걷게 된다.
+        """
+        if self._lastT is None:
+            self._lastT=t
+        dt=t-self._lastT
+        self._lastT=t
+        if 0.0 < dt < Tt/1000.0:
+            self._phase=(self._phase+dt*1000.0/Tt)%1.0
+        return self._phase*Tt
 
     def positions(self,t,kb_offset={}):
         spf=self.Spf
@@ -195,10 +239,13 @@ class TrottingGait:
         Tt=(self.t0+self.t1+self.t2+self.t3)
         Tt2=Tt/2
         rd=0 # rear delta - unused - maybe stupid
-        td=(t*1000)%Tt
-        t2=(t*1000-Tt2)%Tt
-        rtd=(t*1000-rd)%Tt # rear time delta
-        rt2=(t*1000-Tt2-rd)%Tt
+        # 절대시각의 나머지가 아니라 누적 위상을 쓴다. Tt 를 실시간으로 바꿔도
+        # 다리가 있던 자리에 남는다 (advancePhase 주석 참조).
+        pt=self.advancePhase(t,Tt)
+        td=pt%Tt
+        t2=(pt-Tt2)%Tt
+        rtd=(pt-rd)%Tt # rear time delta
+        rt2=(pt-Tt2-rd)%Tt
         Fx=self.Fo
         Rx=-1*self.Ro
         Fy=-100

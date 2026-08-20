@@ -3,7 +3,9 @@
   <statistic center="0 0 0.15" extent="0.8"/>
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3"/>
-    <global azimuth="130" elevation="-20"/>
+    <!-- offwidth/offheight 를 올리지 않으면 오프스크린 렌더가 640x480 에서 잘린다.
+         시연 영상을 1080p 로 뽑기 위한 값이다. -->
+    <global azimuth="130" elevation="-20" offwidth="1920" offheight="1080"/>
   </visual>
   <asset>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.2 0.22 0.25"

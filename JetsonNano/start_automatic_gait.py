@@ -74,6 +74,32 @@ def consoleClear():
 
 trotting=TrottingGait()
 
+# 무릎 각속도 실측. 예전에는 Sh*pi/t3 로 예측했는데 그 식에는 보폭 Sl 이 없다.
+# 스윙 중 무릎은 발을 Sh 만큼 올리는 동시에 보폭만큼 되돌려야 하므로 Sl 이 크면
+# 각속도도 커진다. Sl 을 -70 에서 -160 으로 키우면 실제로는 349 -> 580 도/s 가
+# 되는데 예측식은 같은 값을 계속 보여준다. 위험 구간에 들어가는데 화면은 조용하다.
+#
+# 그래서 명령한 관절각의 차분을 직접 잰다. 한 주기 동안의 최대값을 들고 있는다
+# (스윙은 주기의 일부라 순간값만 보면 대부분 0 이 나온다).
+_slewHist = []
+
+def kneeSlew(jointAngles, now, window):
+    """무릎(theta3) 각속도의 최근 window(초) 내 최대값, 도/s."""
+    global _slewHist
+    knees = [float(j[2]) for j in jointAngles]
+    if _slewHist:
+        t0, prev = _slewHist[-1][0], _slewHist[-1][1]
+        dt = now - t0
+        if 0 < dt < 0.5:
+            rate = max(abs(k - p) for k, p in zip(knees, prev)) / dt * 180.0 / math.pi
+            _slewHist.append((now, knees, rate))
+        else:
+            _slewHist.append((now, knees, 0.0))
+    else:
+        _slewHist.append((now, knees, 0.0))
+    _slewHist = [h for h in _slewHist if now - h[0] <= window][-400:]
+    return max((h[2] for h in _slewHist if len(h) > 2), default=0.0)
+
 # 정지(준비) 자세. 보행 궤적의 기본 발 위치와 같은 값을 쓴다.
 # 예전에는 여기에 iXf=120 / spurWidth=robot.W/2+20 (=80) 을 따로 적어서
 # TrottingGait 의 Fo/Ro/Spf/Spr 과 어긋났고, 보행을 시작하는 순간 발이
@@ -195,14 +221,18 @@ def main(id, command_status, keyInputs=None):
         #   50% 아래로 내려가면 주저앉기 시작한다 (work11 6.16.1).
         #   슬루율은 무릎이 요구받는 각속도다. DS3235 무부하 정격이 545도/s 다.
         support = supportRatio(duty) * 100
-        slew = trotting.Sh * math.pi / (trotting.t3 / 1000.0) if trotting.t3 else 0.0
+        # 명령한 관절각에서 직접 잰다. 한 주기를 창으로 본다.
+        slew = kneeSlew(jointAngles, time.time(),
+                        (trotting.t1 + trotting.t3) / 1000.0) if len(jointAngles) else 0.0
         speed = abs(result_dict['IDstepLength']) / (trotting.t1 + trotting.t3) * 1000
         supportWarn = "  <-- 낮다. 대각 두 발로 버티는 시간이 길다" if support < 50 else ""
-        slewWarn = "  <-- 정격 초과" if slew > 545 else ""
+        slewWarn = ("  <-- 정격 초과!!" if slew > 545
+                    else "  <-- 정격의 90%" if slew > 490 else "")
         print(f" 주기 {trotting.t1 + trotting.t3:.0f}ms (c 느리게 / v 빠르게)"
               f"   스윙비율 {duty:.2f} (b 늘림 / n 줄임)   t1/t3 {trotting.t1:.0f}/{trotting.t3:.0f}")
         print(f" 네발지지 {support:.0f}%{supportWarn}")
-        print(f" 무릎슬루 {slew:.0f}도/s{slewWarn}      전진속도 {speed:.0f}mm/s")
+        print(f" 무릎슬루 {slew:.0f}도/s (실측, 정격 545){slewWarn}"
+              f"      전진속도 {speed:.0f}mm/s (이론, 미끄러짐 0 가정)")
         print(" y/h 앞뒤기울기   u/j 좌우기울기   p 트림리셋   space 정지   Ctrl-C 종료")
         if ikFail:
             print(" !! IK 도달 불가 - 서보 명령 중단. 몸통을 낮추거나(g) 보폭을 줄여라")

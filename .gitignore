@@ -1,5 +1,25 @@
-.vscode/settings.json
+# Python
 *.pyc
-
+__pycache__/
+*.egg-info/
 .venv/
+venv/
+env/
+.env
+
+# Editors / OS
+.vscode/settings.json
 .vscode/c_cpp_properties.json
+.DS_Store
+Thumbs.db
+
+# 학습 산출물 — 정책 가중치는 공개 저장소에 별도 배포한다
+rl/runs/
+runs/
+logs/
+tensorboard/
+
+# 대회 제출 문서 (내부 작업본)
+Docs/*.docx
+Docs/*.pdf
+Docs/.~lock.*

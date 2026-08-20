@@ -83,6 +83,13 @@ trotting=TrottingGait()
 # (스윙은 주기의 일부라 순간값만 보면 대부분 0 이 나온다).
 _slewHist = []
 
+
+def resetSlew():
+    """보행이 멈추면 이력을 버린다. 다시 시작할 때 옛 최대값이 따라오지 않도록."""
+    global _slewHist
+    _slewHist = []
+
+
 def kneeSlew(jointAngles, now, window):
     """무릎(theta3) 각속도의 최근 window(초) 내 최대값, 도/s."""
     global _slewHist
@@ -183,8 +190,17 @@ def main(id, command_status, keyInputs=None):
         ikFail = len(jointAngles) and bool(np.isnan(np.asarray(jointAngles)).any())
 
         # 무릎 각속도 실측. 명령한 관절각에서 재므로 매단 상태에서도 정확하다.
+        #
+        # 보행 중일 때만 잰다. 보행/정지 전환은 한 루프에 자세가 통째로 바뀌므로
+        # 4662도/s 같은 값이 잡히는데, 그것은 궤적의 각속도가 아니라 자세 전환이다.
+        # 경고가 자주 틀리면 진짜 경고를 무시하게 된다. 실측 로그에서 800도/s 초과
+        # 1122 회 중 340 회가 정지 상태였다.
+        walking = bool(result_dict.get('StartStepping'))
+        if not walking:
+            resetSlew()
         slew = kneeSlew(jointAngles, time.time(),
-                        (trotting.t1 + trotting.t3) / 1000.0) if len(jointAngles) and not ikFail else 0.0
+                        (trotting.t1 + trotting.t3) / 1000.0) if (
+                            walking and len(jointAngles) and not ikFail) else 0.0
 
         # First Step doesn't contains jointAngles
         if len(jointAngles) and not ikFail:

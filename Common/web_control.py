@@ -101,7 +101,8 @@ button:active{background:#4a5261}
 <div class="st">
  보폭 <b id="sl">-</b>mm &nbsp; 좌우 <b id="sw">-</b>mm &nbsp; 회전 <b id="sa">-</b>°<br>
  <b id="mode">-</b> &nbsp; 대각 차이 <b id="spread">-</b>mm<br>
- 네발지지 <b id="sup">-</b>% &nbsp; 무릎슬루 <b id="slew">-</b>°/s &nbsp; 전진 <b id="spd">-</b>mm/s
+ 네발지지 <b id="sup">-</b>% &nbsp; 무릎슬루 <b id="slew">-</b>°/s (정격 545)<br>
+ 전진 <b id="spd">-</b>mm/s <span style="font-size:11px">이론값 — 실제 속도는 줄자로 재야 합니다</span>
 </div>
 
 <script>
@@ -149,14 +150,15 @@ function draw(s){
   document.getElementById(k+"v").textContent=(+s[k]).toFixed(SLIDERS[k]);
  }
  // 파생값. 슬라이더를 움직이는 동안 이게 같이 움직여야 무엇을 하고 있는지 보인다.
+ // 슬루는 제어 루프가 실측해 내려준다. 여기서 다시 계산하면 보폭을 놓친다.
  const t3=s.Tt*s.duty, sup=Math.max(0,1-2*s.duty)*100;
- const slew=t3>0?s.Sh*Math.PI/(t3/1000):0;
+ const slew=(s.slew!==undefined)?s.slew:(t3>0?s.Sh*Math.PI/(t3/1000):0);
  document.getElementById("sup").textContent=sup.toFixed(0);
  document.getElementById("slew").textContent=slew.toFixed(0);
  document.getElementById("spd").textContent=(Math.abs(s.IDstepLength)/s.Tt*1000).toFixed(0);
  // 위험 구간을 색으로 알린다. 545°/s 는 DS3235 무부하 정격.
  document.getElementById("sup").style.color=sup<50?"#e0a030":"#e8e8ea";
- document.getElementById("slew").style.color=slew>545?"#e05050":"#e8e8ea";
+ document.getElementById("slew").style.color=slew>545?"#e05050":slew>490?"#e0a030":"#e8e8ea";
 }
 for(const k in SLIDERS){
  document.getElementById(k).addEventListener("input",e=>{

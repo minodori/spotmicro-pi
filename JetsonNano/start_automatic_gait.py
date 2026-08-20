@@ -182,6 +182,10 @@ def main(id, command_status, keyInputs=None):
         blocked = []
         ikFail = len(jointAngles) and bool(np.isnan(np.asarray(jointAngles)).any())
 
+        # 무릎 각속도 실측. 명령한 관절각에서 재므로 매단 상태에서도 정확하다.
+        slew = kneeSlew(jointAngles, time.time(),
+                        (trotting.t1 + trotting.t3) / 1000.0) if len(jointAngles) and not ikFail else 0.0
+
         # First Step doesn't contains jointAngles
         if len(jointAngles) and not ikFail:
             # Real Actuators
@@ -190,6 +194,9 @@ def main(id, command_status, keyInputs=None):
         if keyInputs is not None:
             keyInputs.runtime['blocked'] = blocked
             keyInputs.runtime['ikFail'] = bool(ikFail)
+            # 폰 UI 도 같은 실측값을 봐야 한다. 페이지에서 다시 계산하면
+            # 예전의 Sh*pi/t3 처럼 보폭을 놓친 식으로 되돌아간다.
+            keyInputs.runtime['slew'] = float(slew)
             
             # # Plot Robot Pose into Matplotlib for Debugging
             # TODO: Matplotplib animation
@@ -221,9 +228,6 @@ def main(id, command_status, keyInputs=None):
         #   50% 아래로 내려가면 주저앉기 시작한다 (work11 6.16.1).
         #   슬루율은 무릎이 요구받는 각속도다. DS3235 무부하 정격이 545도/s 다.
         support = supportRatio(duty) * 100
-        # 명령한 관절각에서 직접 잰다. 한 주기를 창으로 본다.
-        slew = kneeSlew(jointAngles, time.time(),
-                        (trotting.t1 + trotting.t3) / 1000.0) if len(jointAngles) else 0.0
         speed = abs(result_dict['IDstepLength']) / (trotting.t1 + trotting.t3) * 1000
         supportWarn = "  <-- 낮다. 대각 두 발로 버티는 시간이 길다" if support < 50 else ""
         slewWarn = ("  <-- 정격 초과!!" if slew > 545

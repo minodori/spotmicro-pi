@@ -19,6 +19,11 @@ runs/
 logs/
 tensorboard/
 
+# 어떤 문서도 참조하지 않는 대용량 미디어.
+# git rm --cached 만으로는 git add -A 에서 되돌아온다 (A 지적, 2026-08-20)
+study/minho/images/SpotMicro_new.xlsx
+study/minho/images/w02_RightLeg_Test.mp4
+
 # 대회 제출 문서 (내부 작업본)
 Docs/*.docx
 Docs/*.pdf

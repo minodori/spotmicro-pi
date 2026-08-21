@@ -65,17 +65,37 @@ git clone --depth 1 https://github.com/robertchoi/oss_spotmicro.git
 cd oss_spotmicro && uv sync          # Python 3.12, GPU 불필요
 ```
 
+### 로봇 없이 여기까지 됩니다
+
+로봇도 GPU 도 없이 실행됩니다. **이 저장소의 검증 가능한 주장은 전부 여기서 확인됩니다.**
+
 ```bash
-# 로봇 모델 검증 — 시뮬레이터와 실물 제어 코드가 같은 기하를 쓰는지
-uv run python rl/validate_mjcf.py
-
-# 강화학습                                        (진행 중)
-uv run python -m rl.train --timesteps 20000000
-uv run python -m rl.eval --run runs/walk --render
-
-# 실물 보행 (Raspberry Pi CM4 에서)
-python JetsonNano/start_automatic_gait.py
+make verify     # 모델-실물 일치 8단계 검증. 기하 일치는 0.0000mm 를 요구합니다
+make eval       # 학습된 정책을 재생하고, 실물 서보가 낼 수 있는 명령인지 판정합니다
+make eval-render   # 같은 것을 화면으로
+make gait       # 규칙 기반 보행을 영상으로 저장
 ```
+
+<details><summary><code>make</code> 없이 직접 실행하려면</summary>
+
+```bash
+uv run python rl/gen_mjcf.py        # 실측 상수 -> 시뮬레이션 모델 (생성물입니다)
+uv run python rl/validate_mjcf.py   # 8단계 검증
+uv run python -m rl.eval --run checkpoints --command 0.2 0 0
+```
+
+</details>
+
+### 로봇이 있어야 하는 것
+
+```bash
+python JetsonNano/start_automatic_gait.py     # Raspberry Pi CM4 에서
+```
+
+부품이 저희와 다르다면 **버그가 아니라 정상적인 포크입니다.** 자기 치수를
+`Kinematics/kinematics.py` 한 곳에 넣고 `make verify` 를 돌리면, 시뮬레이션 모델과
+실물 제어가 함께 따라옵니다. 재는 법과 함정은 [CONTRIBUTING.md](CONTRIBUTING.md) 에
+있습니다.
 
 조작은 키보드 또는 **폰 웹 브라우저**(`http://<로봇IP>:8080`)로 합니다.
 보폭·몸통높이·보행주기·다리별 트림을 로봇을 보면서 실시간으로 조정하고, 네 발 지지

@@ -2,8 +2,9 @@
 
 대회 2차 기능테스트에서 심사자가 하드웨어 없이 결과를 재현하는 경로다.
 
-    python -m rl.eval --run rl/runs/obsB --command 0.2 0 0
-    python -m rl.eval --run rl/runs/obsB --render
+    python -m rl.eval --run checkpoints --command 0.2 0 0   # 배포된 가중치
+    python -m rl.eval --run checkpoints --render
+    python -m rl.eval --run rl/runs/obsA --command 0.2 0 0   # 직접 학습한 것
 
 출력 지표는 결과보고서에 그대로 인용할 수 있게 구성했다. 특히 **최대 서보 토크**와
 **무릎 각속도**는 학습된 정책이 실물 서보가 낼 수 없는 명령을 내는지 판정한다.
@@ -13,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import time
 from pathlib import Path
 
@@ -25,6 +27,22 @@ from rl.envs import config as C
 from rl.envs.spotmicro_walk import SpotMicroWalkEnv
 
 SERVO_RATED_SLEW = 545.0     # DS3235 무부하 정격 (deg/s)
+
+
+def _obs_mode_of(run: Path) -> str:
+    """정책이 기대하는 관측 모드는 학습이 남긴 meta.json 이 정본이다.
+
+    디렉터리 이름으로 추측하면(`endswith("A")`) 가중치를 checkpoints/ 로 옮기는
+    순간 틀린 모드로 읽고, 관측 차원이 달라 로드 자체가 실패하거나 더 나쁘게는
+    엉뚱한 값을 넣은 채 조용히 돌아간다.
+    """
+    meta = run / "meta.json"
+    if meta.exists():
+        return json.loads(meta.read_text(encoding="utf-8"))["obs_mode"]
+    guess = "A" if run.name.endswith("A") else "B"
+    print(f"경고: {meta} 가 없어 디렉터리 이름으로 {guess}안이라고 추측합니다. "
+          f"틀렸다면 --obs 로 지정하세요.")
+    return guess
 
 
 def load(run: Path, obs_mode: str, render: bool, domain_rand: bool):
@@ -96,14 +114,14 @@ def main() -> None:
     p = argparse.ArgumentParser(description="SpotMicro 보행 정책 평가")
     p.add_argument("--run", type=Path, required=True)
     p.add_argument("--obs", choices=["A", "B"], default=None,
-                   help="생략하면 run 디렉터리 이름에서 추론")
+                   help="생략하면 run/meta.json 에서 읽음")
     p.add_argument("--episodes", type=int, default=5)
     p.add_argument("--render", action="store_true")
     p.add_argument("--command", type=float, nargs=3, metavar=("VX", "VY", "WZ"))
     p.add_argument("--no-domain-rand", action="store_true")
     args = p.parse_args()
 
-    obs_mode = args.obs or ("A" if args.run.name.endswith("A") else "B")
+    obs_mode = args.obs or _obs_mode_of(args.run)
     model, env = load(args.run, obs_mode, args.render, not args.no_domain_rand)
     r = rollout(model, env, args.command, args.episodes, args.render)
 

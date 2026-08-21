@@ -13,8 +13,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
+import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
@@ -74,10 +76,19 @@ def main() -> None:
     p.add_argument("--run-name", type=str, default=None)
     p.add_argument("--no-domain-rand", action="store_true")
     p.add_argument("--resume", type=str, default=None)
+    p.add_argument("--log-std-init", type=float, default=None,
+                   help="초기 행동 표준편차의 로그. 생략하면 PPO_KWARGS 기본값")
+    p.add_argument("--ent-coef", type=float, default=None)
     p.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "auto"],
                    help="기본 cpu. 정책이 작은 MLP 라 GPU 전송 오버헤드가 더 크고, "
                         "물리 연산도 CPU 에서 돈다")
     args = p.parse_args()
+
+    kw = {**PPO_KWARGS, "policy_kwargs": dict(PPO_KWARGS["policy_kwargs"])}
+    if args.log_std_init is not None:
+        kw["policy_kwargs"]["log_std_init"] = args.log_std_init
+    if args.ent_coef is not None:
+        kw["ent_coef"] = args.ent_coef
 
     run_dir = Path("rl/runs") / (args.run_name or f"obs{args.obs}")
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -111,7 +122,7 @@ def main() -> None:
         print(f"이어서 학습: {args.resume}")
     else:
         model = PPO(env=env, verbose=1, seed=args.seed, device=args.device,
-                    tensorboard_log=str(run_dir), **PPO_KWARGS)
+                    tensorboard_log=str(run_dir), **kw)
 
     ckpt = CheckpointCallback(save_freq=max(500_000 // args.num_envs, 1),
                               save_path=str(run_dir / "checkpoints"),
@@ -119,11 +130,27 @@ def main() -> None:
 
     print(f"관측 {args.obs}안 ({C.obs_dim(args.obs)}차원) | 환경 {args.num_envs}개 | "
           f"랜덤화 {'ON' if dr else 'OFF'} | 목표 {args.timesteps:,} 스텝 | "
-          f"제어 {C.CONTROL_HZ:.0f}Hz | device={args.device}")
+          f"제어 {C.CONTROL_HZ:.0f}Hz | device={args.device}\n"
+          f"  초기 std {np.exp(kw['policy_kwargs'].get('log_std_init', 0.0)):.3f} | "
+          f"ent_coef {kw['ent_coef']} | "
+          f"보상 0 하한 {'ON' if C.ONLY_POSITIVE_REWARDS else 'OFF'}")
     model.learn(total_timesteps=args.timesteps, callback=ckpt, progress_bar=False)
 
     model.save(run_dir / "policy")
     env.save(str(run_dir / "vecnormalize.pkl"))
+
+    # 관측 모드를 함께 남긴다. 이것이 없으면 평가 쪽이 디렉터리 이름으로 추측해야
+    # 하고(`endswith("A")`), 가중치를 checkpoints/ 로 옮기는 순간 틀린 모드로 읽는다.
+    # 정책과 그 정책이 기대하는 관측은 한 곳에 같이 있어야 한다.
+    (run_dir / "meta.json").write_text(json.dumps({
+        "obs_mode": args.obs,
+        "obs_dim": C.obs_dim(args.obs),
+        "timesteps": args.timesteps,
+        "control_hz": C.CONTROL_HZ,
+        "domain_rand": dr,
+        "log_std_init": kw["policy_kwargs"].get("log_std_init", 0.0),
+        "only_positive_rewards": C.ONLY_POSITIVE_REWARDS,
+    }, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\n저장 완료\n  {run_dir / 'policy.zip'}\n  {run_dir / 'vecnormalize.pkl'}")
     print(f"\n평가:  python -m rl.eval --run {run_dir} --command 0.2 0 0")
 

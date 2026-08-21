@@ -126,10 +126,10 @@ FALL_PENALTY = _env("KQ_FALL_PENALTY", 10.0)
 # 링크 질량: 총 2.2kg 만 실측, 배분은 추정
 # kp/armature: 아직 실측 전이라 넓게 (CTO 권고)
 RAND_TRUNK_MASS = (-0.25, 0.35)      # kg
-RAND_FRICTION = (0.6, 1.4)           # 배수 — 장판/카펫
+RAND_FRICTION = (_env("KQ_FRIC_LO", 0.6), _env("KQ_FRIC_HI", 1.4))   # 배수 — 장판/카펫
 RAND_KP = (0.6, 1.4)                 # 배수 — 서보 게인 미실측
 RAND_COM_X = (-15.0, 15.0)           # mm
-RAND_SERVO_OFFSET_DEG = 8.0          # 표준편차
+RAND_SERVO_OFFSET_DEG = _env("KQ_SERVO_OFFSET", 8.0)   # 표준편차
 RAND_LATENCY_MAX = 2                 # 제어 스텝 (0~40ms)
 
 PUSH_INTERVAL_S = 5.0

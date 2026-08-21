@@ -89,7 +89,7 @@ uv run python -m rl.eval --run checkpoints --command 0.2 0 0
 ### 로봇이 있어야 하는 것
 
 ```bash
-python JetsonNano/start_automatic_gait.py     # Raspberry Pi CM4 에서
+python RaspberryPi/start_automatic_gait.py    # Raspberry Pi CM4 에서
 ```
 
 부품이 저희와 다르다면 **버그가 아니라 정상적인 포크입니다.** 자기 치수를
@@ -121,7 +121,7 @@ oss_spotmicro/
 │   ├── gait_params.py        보행 파라미터
 │   └── web_control.py        폰 웹 조작 UI
 ├── Kinematics/             역기구학 — 실측 링크 길이로 정정     [상속+수정]
-├── JetsonNano/             서보 제어 · PCA9685                  [상속+수정]
+├── RaspberryPi/            서보 제어 · PCA9685 · 캘리브레이션    [상속+수정]
 │                             디렉터리명은 upstream 유래.
 │                             현재 대상 보드는 Raspberry Pi CM4
 ├── study/                  개발 일지 — 3인 11주                       [신규]

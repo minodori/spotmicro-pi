@@ -49,7 +49,7 @@ This product includes work developed by third parties.
   upstream 상속 + 본 팀 수정 (GPL-3.0)
 
     Kinematics/            역기구학. 링크 길이를 실측값으로 정정
-    JetsonNano/            서보 제어. PCA9685 채널 매핑, 펄스폭 캘리브레이션,
+    RaspberryPi/           서보 제어. PCA9685 채널 매핑, 펄스폭 캘리브레이션,
                            Raspberry Pi CM4 대응. 디렉터리명은 upstream 유래이며
                            현재 대상 보드는 Jetson Nano 가 아닙니다
     Simulation/            PyBullet 시뮬레이션. 모듈 경로 수정

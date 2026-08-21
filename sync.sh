@@ -30,7 +30,7 @@ set -euo pipefail
 
 REMOTE=${SPOT_REMOTE:-minodori@192.168.0.240}
 DEST=${SPOT_DEST:-Projects/SpotMicroJetson/}
-DIRS="JetsonNano Kinematics Common"
+DIRS="RaspberryPi Kinematics Common"
 
 if [ "${1:-}" = "--pull" ]; then
   ssh "$REMOTE" "cd '$DEST' && bash -s" <<'REMOTE_EOF'

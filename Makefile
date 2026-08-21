@@ -4,7 +4,7 @@
 #   make verify   모델이 실물과 맞는지 8단계 검증   <- 로봇 불필요
 #   make eval     학습된 정책을 재생                <- 로봇 불필요
 #
-# 로봇이 필요한 것은 JetsonNano/ 아래에 있습니다.
+# 로봇이 필요한 것은 RaspberryPi/ 아래에 있습니다.
 
 .DEFAULT_GOAL := help
 .PHONY: help setup verify model eval eval-render train gait clean

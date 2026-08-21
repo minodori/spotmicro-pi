@@ -37,7 +37,7 @@ Kinematics/kinematics.py:59~65     ← 링크 길이의 유일한 정본
         │
         ├──→ rl/gen_mjcf.py        → rl/mjcf/*.xml  (시뮬레이션 모델, 생성물)
         ├──→ rl/model_api.py       → rl/envs/, rl/eval.py  (강화학습)
-        └──→ JetsonNano/           (실물 서보 제어)
+        └──→ RaspberryPi/          (실물 서보 제어)
 
   rl/validate_mjcf.py 가 이 셋의 일치를 8단계로 검증합니다
 ```
@@ -119,7 +119,7 @@ uv run python rl/validate_mjcf.py   # 모델-실물 일치 8단계 검증
 uv run python -m rl.eval --run checkpoints --command 0.2 0 0
 ```
 
-로봇이 필요한 것은 `JetsonNano/` 아래의 서보 제어 코드입니다.
+로봇이 필요한 것은 `RaspberryPi/` 아래의 서보 제어 코드입니다.
 
 ---
 

@@ -1,0 +1,87 @@
+# 모델과 실물이 어긋나지 않는지 매 푸시마다 확인한다.
+#
+# 이 저장소가 겪은 문제는 기구 치수가 코드 세 곳에 흩어져 있어, 한 곳만 고쳐도
+# 저장소가 조용히 갈라진 것이었다 (CONTRIBUTING.md 참조). 사람이 기억해서 막을
+# 수 없으므로 CI 로 강제한다.
+#
+#   1. 커밋된 MJCF 가 실측 상수에서 생성한 것과 같은가  -> 손으로 고친 흔적을 잡는다
+#   2. 검증 8게이트가 전부 통과하는가                   -> 기하 일치는 0.0000mm 를 요구
+name: validate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  model-consistency:
+    name: 모델-실물 일치 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 의존성 동기화
+        run: uv sync --frozen
+
+      # MJCF 는 생성물이다. 손으로 고치면 다음 생성 때 사라지고, 그 사이에
+      # 시뮬레이션과 실물이 갈라진다.
+      - name: 커밋된 MJCF 가 상수에서 생성한 것과 일치하는가
+        run: |
+          uv run python rl/gen_mjcf.py
+          if ! git diff --exit-code -- rl/mjcf/; then
+            echo "::error::커밋된 rl/mjcf/ 가 Kinematics/kinematics.py 의 상수와 어긋납니다."
+            echo "::error::MJCF 를 직접 편집하지 말고, 상수를 고친 뒤 rl/gen_mjcf.py 를 다시 실행하세요."
+            exit 1
+          fi
+
+      - name: 검증 8게이트
+        run: uv run python rl/validate_mjcf.py
+
+      # 학습된 정책이 실제로 재생되는지. 심사자가 클론했을 때 밟는 경로와 같다.
+      - name: 정책 재생 (가중치가 있을 때만)
+        run: |
+          if [ -f checkpoints/policy.zip ]; then
+            uv run python -m rl.eval --run checkpoints --command 0.2 0 0 --episodes 1
+          else
+            echo "checkpoints/policy.zip 없음 — 건너뜁니다"
+          fi
+
+  license:
+    name: 라이선스 충돌 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # 이 저장소는 GPL-3.0-or-later 다. GPL-2.0-only 의존성이 들어오면 비호환이다.
+      # stable-baselines3[extra] 가 ale-py(GPL-2.0-only) 를 끌고 온 전례가 있다.
+      - name: GPL-2.0-only 의존성이 없는가
+        run: |
+          uv sync --frozen
+          uv run python - <<'PY'
+          import importlib.metadata as m, sys
+          bad = []
+          for d in m.distributions():
+              name = d.metadata["Name"]
+              lic = (d.metadata.get("License-Expression")
+                     or d.metadata.get("License") or "")
+              if "GPL-2.0-only" in lic or "GPLv2" == lic.strip():
+                  bad.append(f"{name} ({lic})")
+          if bad:
+              print("GPL-3.0 과 비호환인 의존성:", *bad, sep="\n  ")
+              sys.exit(1)
+          print("GPL-2.0-only 의존성 없음")
+          PY

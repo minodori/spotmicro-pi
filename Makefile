@@ -17,7 +17,8 @@ help:
 	@echo '    make model        실측 상수에서 시뮬레이션 모델을 다시 생성'
 	@echo '    make eval         배포된 정책을 재생하고 실물 이식 가능성을 판정'
 	@echo '    make eval-render  같은 것을 화면으로'
-	@echo '    make gait         규칙 기반 보행을 영상으로 저장'
+	@echo '    make gait-check   실물에서 걷는 궤적을 시뮬에서 재생해 속도를 잰다'
+	@echo '    make gait         같은 것을 영상으로 저장'
 	@echo '    make train        직접 학습 (CPU, 수 시간)'
 	@echo ''
 	@echo '  치수를 바꿨다면 make model 다음에 make verify 입니다.'
@@ -43,8 +44,15 @@ eval:
 eval-render:
 	uv run python -m rl.eval --run checkpoints --command 0.2 0 0 --render --episodes 1
 
+# 게이트 3(순기구학 대조)은 기하가 같다는 것만 증명한다. 질량·관성·마찰·서보
+# 게인이 실물과 맞는지는 말해주지 않는다. 그것을 보는 방법은 **실물에서 이미
+# 걷는 것으로 확인된 궤적**을 시뮬레이터에 그대로 넣고 같은 속도가 나오는지
+# 재는 것이다. 실물 실측 49~50mm/s, 시뮬 52mm/s.
+gait-check:
+	uv run python -m rl.render_gait --measure
+
 gait:
-	uv run python rl/render_gait.py
+	uv run python -m rl.render_gait
 
 train:
 	OMP_NUM_THREADS=1 uv run python -m rl.train --obs A --timesteps 20000000

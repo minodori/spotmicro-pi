@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+# ⚠ 이 스크립트를 실행하지 마십시오. 낡았습니다. 이력 참고용으로만 둡니다.
+#
+# 2026-08-20 에 썼을 때 oss_spotmicro 는 orocapangyo 의 8/05 스냅샷이었고,
+# 우리 작업은 minodori/SpotMicroJetson 에 따로 있었습니다. 그래서 [1/4] 의
+# `git read-tree -m -u oroca/master` 로 트리를 통째로 맞추는 것이 맞았습니다.
+#
+# 그 뒤 PR #1·#2 로 우리 작업이 oss_spotmicro 에 들어왔습니다. 지금 실행하면
+# rl/, Makefile, CONTRIBUTING.md, .github/, checkpoints/, RaspberryPi/ 이동이
+# 전부 사라지고, [4/4] 가 우리 README 를 UPSTREAM_README 로 덮습니다.
+#
+# [2/4]~[4/4] 는 이미 다른 커밋으로 처리됐습니다. 지금 남은 것은 이력 기록뿐이고,
+# 그것은 tools/merge_upstream_history.sh 한 줄이면 됩니다 — 트리를 건드리지
+# 않고 상대 히스토리를 부모로만 기록합니다.
+
 # =============================================================================
 #  oss_spotmicro — 개발 히스토리 복원 (force push 불필요, PR 로 병합 가능)
 #  팀 KINETIQ / 2026 오픈소스 개발자대회

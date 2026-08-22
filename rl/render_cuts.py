@@ -105,35 +105,79 @@ def write(path, frames):
 
 # --- 컷 1. 기존값 모델 vs 실측 모델 -------------------------------------
 def cut1(seconds=8.0):
-    """상속받은 상수와 실측 상수로 만든 로봇을 같은 카메라로 나란히 세운다.
+    """상속받은 상수와 실측 상수로 만든 로봇을 같은 카메라로 나란히 걷게 한다.
 
-    다리 200mm 대 245mm, 몸통 140mm 대 185mm. 같은 코드가 두 로봇을 그린다는
-    것이 요지이므로, 두 화면 모두 gen_mjcf.build() 가 만든 것을 쓴다.
+    가만히 세워두면 크기 차이만 보인다. 같은 보행 코드를 두 모델에 물리면
+    다리 길이가 보폭과 몸통 높이를 바꾸므로 "다른 로봇이다" 가 움직임으로
+    드러난다. 궤적 코드는 하나이고 상수만 다르다는 것이 요지다.
     """
+    from Kinematics.kinematicMotion import TrottingGait
+    from Common.gait_params import defaultParams, gaitPhases
+
     half = W // 2
-    out = []
-    scenes = []
-    for kin in (OldKin(), Kinematic()):
-        m = mujoco.MjModel.from_xml_string(wrapScene(build(kin)))
+    panes = []
+    # 몸통 높이는 모델마다 다르게 준다. 하나로 맞출 수가 없다 —
+    # 옛 모델은 다리가 200mm 라 H(=120+height)가 그것을 넘으면 IK 가 안 풀리고,
+    # 실측 모델은 낮추면 무릎 모멘트 팔이 커져 3N·m 서보가 못 버티고 주저앉는다.
+    # 각자 도달 한계의 90% 근처, 즉 자기 작동 자세에서 걷게 한다.
+    for k, bodyH in ((OldKin(), 60.0), (Kinematic(), 95.0)):
+        m = mujoco.MjModel.from_xml_string(wrapScene(build(k)))
         d = mujoco.MjData(m)
-        # 옛 모델은 다리가 짧아 기립 명령이 달라진다. 각 모델의 무릎 내각을
-        # 같게 두어 "같은 자세, 다른 크기" 로 보이게 한다.
-        h = 95.0 if kin is not OldKin else 95.0
-        try:
-            standModel(m, d, h)
-        except Exception:
-            mujoco.mj_resetData(m, d); d.qpos[2] = 0.25; mujoco.mj_forward(m, d)
-        scenes.append((m, d, mujoco.Renderer(m, H, half)))
-    for i in range(int(seconds * FPS)):
-        az = 120 + 50 * i / (seconds * FPS)         # 천천히 돌아 3D 로 읽히게
-        cam = camera(0.62, az, -12)
+        adr = [m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, n)]
+               for n in JOINT_ORDER]
+        aid = [mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, n) for n in JOINT_ORDER]
+        # 각 모델의 기구 상수로 역기구학을 푼다. 같은 발끝 궤적을 명령해도
+        # 다리가 다르면 관절각이 다르게 나오고, 그것이 이 컷의 내용이다.
+        kin = Kinematic()
+        for a, b in (('l1', k.l1), ('l2', k.l2), ('l3', k.l3),
+                     ('l4', k.l4), ('L', k.L), ('W', k.W)):
+            setattr(kin, a, b)
+        g = TrottingGait()
+        # 발 위치를 각 모델의 기하로 다시 잡는다. TrottingGait 의 기본값은
+        # 실측 로봇(L=185, W=78, l1=56)에 맞춘 것이라, 몸통이 140mm 인 옛
+        # 모델에 그대로 쓰면 발이 관절에서 너무 멀어 다리가 닿지 않는다.
+        #   앞뒤: 관절 바로 아래에서 25mm 뒤 (work11 §6.25 의 무게중심 정렬)
+        #   좌우: 어깨각이 0 이 되는 W/2 + l1
+        g.Fo = 50 + k.L / 2.0 - 25
+        g.Ro = k.L / 2.0 - 25
+        g.Spf = g.Spr = k.W / 2.0 + k.l1
+        # height 70. 실측 모델의 상용값은 95 지만 옛 모델은 다리가 200mm 라
+        # 그 자세에 도달하지 못한다(H=215 > 200, IK 가 풀리지 않는다). 같은
+        # 명령을 두 로봇에 주는 것이 이 컷의 요지이므로 둘 다 되는 값을 쓴다.
+        # 그래도 자세는 갈린다 - 옛 모델은 무릎 내각 144도로 거의 곧게 서고
+        # 실측 모델은 101도로 굽힌다. 같은 명령, 다른 로봇.
+        kb = dict(defaultParams(), Tt=1400.0, duty=0.143, Sh=20.0, height=bodyH,
+                  IDstepLength=-55.0, IDstepWidth=0.0, IDstepAlpha=0.0,
+                  IDtrim=[3.0, 3.0, -3.0, -3.0])
+        g.Sh = kb['Sh']; g.t1, g.t3 = gaitPhases(kb)
+        mujoco.mj_resetData(m, d)
+        d.qpos[2] = 0.30
+        panes.append((m, d, mujoco.Renderer(m, H, half), adr, aid, kin, g, kb))
+
+    sg = jointSigns()
+    out = []
+    step = panes[0][0].opt.timestep
+    n = int(seconds * FPS)
+    tid = [mujoco.mj_name2id(p[0], mujoco.mjtObj.mjOBJ_BODY, 'trunk') for p in panes]
+    for i in range(n):
         row = []
-        for m, d, r in scenes:
-            r.update_scene(d, camera=cam)
+        for pi, (m, d, r, adr, aid, kin, g, kb) in enumerate(panes):
+            for _ in range(int(1.0 / FPS / step)):
+                t = d.time
+                th = np.asarray(kin.calcIK(g.positions(t, kb), (0, 0, 0),
+                                           (50, 40 + kb['height'], 0)), float)
+                tgt = sg * np.array([th[LEGS.index(nm.split('_')[0])]
+                                     [JOINTS.index(nm.split('_')[1])] for nm in JOINT_ORDER])
+                if not np.isnan(tgt).any():
+                    for kk, a in enumerate(aid):
+                        d.ctrl[a] = tgt[kk]
+                mujoco.mj_step(m, d)
+            look = d.xpos[tid[pi]].copy(); look[2] -= 0.06
+            r.update_scene(d, camera=camera(0.66, 128, -10, look))
             row.append(r.render())
         out.append(np.hstack(row))
-    for _, _, r in scenes:
-        r.close()
+    for p in panes:
+        p[2].close()
     return out
 
 
@@ -167,7 +211,6 @@ def cut2(seconds=6.0):
         for j, name in enumerate(JOINT_ORDER):
             if name.endswith('_leg'):  th[j] = base[j] + 0.32 * np.sin(ph)
             if name.endswith('_foot'): th[j] = base[j] - 0.32 * np.sin(ph)
-        p = kin.calcLegPoints((th[0], th[1], th[2]))[4]
         row = []
         for m, d, r in panes:
             adr = [m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, nm)]
@@ -178,14 +221,22 @@ def cut2(seconds=6.0):
                 d.qpos[a] = sg[kk] * th[kk]
             mujoco.mj_forward(m, d)
             tid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'trunk')
-            sid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, 'FL_foot')
-            ik = d.xpos[tid] + np.array([kin.L / 2.0 + p[2],
-                                         kin.W / 2.0 - p[0], p[1]]) * 0.001
-            r.update_scene(d, camera=camera(0.24, 152, -6, d.site_xpos[sid]))
-            # 22mm 로 둔다. 화면의 회색 공은 발 지오메트리(12mm)가 아니라
-            # 터치 센서용 site(18mm)이고 그것도 렌더링된다. 그보다 작으면
-            # 겹쳤을 때 site 안에 숨어 "마커가 없다" 로 읽힌다.
-            marker(r.scene, ik, (0.95, 0.28, 0.20, 1.0), 0.022)
+            # 로봇 전체가 들어오는 거리로 잡는다. 발만 클로즈업하면 무엇의
+            # 발인지, 빨간 공이 무엇에 대한 것인지 맥락이 사라진다.
+            # 몸통이 아니라 몸통과 발 사이를 본다. 몸통을 보면 발이 프레임
+            # 아래로 잘리는데, 이 컷에서 봐야 하는 것은 발이다.
+            look = d.xpos[tid].copy(); look[2] -= 0.10
+            r.update_scene(d, camera=camera(0.52, 148, -6, look))
+            for li, leg in enumerate(LEGS):
+                q = kin.calcLegPoints((th[li*3], th[li*3+1], th[li*3+2]))[4]
+                fx = +1 if leg in ('FL', 'FR') else -1
+                fy = +1 if leg in ('FL', 'RL') else -1
+                ik = d.xpos[tid] + np.array([fx*kin.L/2.0 + q[2],
+                                             fy*(kin.W/2.0 - q[0]), q[1]]) * 0.001
+                # 28mm. 화면의 회색 공은 발 지오메트리(12mm)가 아니라 터치 센서
+                # site(18mm)이고 그것도 렌더링된다. 그보다 작으면 겹쳤을 때
+                # site 안에 숨어 "마커가 없다" 로 읽힌다.
+                marker(r.scene, ik, (0.95, 0.28, 0.20, 1.0), 0.028)
             row.append(r.render())
         out.append(np.hstack(row))
     for _, _, r in panes:

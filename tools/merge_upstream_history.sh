@@ -36,6 +36,18 @@
 #
 #   전체 클론이 161MB -> 682MB 가 된다 (STL·이미지 이력이 따라온다).
 #   `git clone --depth 1` 은 영향받지 않는다.
+#
+# --- 포크가 낡았을 때 --------------------------------------------------------
+#
+#   PR 을 보낼 포크를 그냥 클론하면 안 된다. 2026-08-22 에 minodori/oss_spotmicro
+#   는 커밋 1개·파일 207개로 PR #1·#2 머지 전 상태였고, 그 위에서 병합하면
+#   두 PR 의 내용이 전부 삭제로 나오는 브랜치가 만들어진다.
+#
+#   상위 저장소에서 클론해 병합하고, 포크는 push 대상으로만 쓴다:
+#     git clone https://github.com/robertchoi/oss_spotmicro.git
+#     git remote add fork git@github.com:<본인>/oss_spotmicro.git
+#     ...병합...
+#     git push fork history-restore
 # =============================================================================
 set -euo pipefail
 

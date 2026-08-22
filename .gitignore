@@ -28,3 +28,6 @@ study/minho/images/w02_RightLeg_Test.mp4
 Docs/*.docx
 Docs/*.pdf
 Docs/.~lock.*
+
+# 영상 컷은 GitHub 이슈에 올리고 URL 만 문서에 남긴다 (결정.md CB-1)
+docs/media/*.mp4

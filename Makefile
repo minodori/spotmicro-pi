@@ -38,11 +38,13 @@ model:
 verify: model
 	uv run python rl/validate_mjcf.py
 
+# 명령 0.3 을 쓴다. 배포된 정책은 명령 범위의 위쪽에서만 추종하기 때문이다
+# (checkpoints/README.md 참조). 낮은 명령을 주면 제자리에 선다 — 고장이 아니다.
 eval:
-	uv run python -m rl.eval --run checkpoints --command 0.2 0 0
+	uv run python -m rl.eval --run checkpoints --command 0.3 0 0 --no-domain-rand
 
 eval-render:
-	uv run python -m rl.eval --run checkpoints --command 0.2 0 0 --render --episodes 1
+	uv run python -m rl.eval --run checkpoints --command 0.3 0 0 --no-domain-rand --render --episodes 1
 
 # 게이트 3(순기구학 대조)은 기하가 같다는 것만 증명한다. 질량·관성·마찰·서보
 # 게인이 실물과 맞는지는 말해주지 않는다. 그것을 보는 방법은 **실물에서 이미

@@ -1,0 +1,12 @@
+{
+  "obs_mode": "B",
+  "obs_name": "hist",
+  "obs_dim": 69,
+  "run": "hist-clean (rl/runs/curB1)",
+  "timesteps": 6000000,
+  "control_hz": 50.0,
+  "domain_rand": false,
+  "log_std_init": 0.0,
+  "only_positive_rewards": true,
+  "note": "도메인 랜덤화 없이 학습. 명령 vx 0.3 부근에서만 추종한다."
+}

@@ -222,7 +222,13 @@ def cut2(seconds=6.0):
             adr = [m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, nm)]
                    for nm in JOINT_ORDER]
             mujoco.mj_resetData(m, d)
-            d.qpos[2] = 0.32
+            # 물리를 돌리지 않고 명령한 자세만 그린다. 접촉이 자세를 흔들면
+            # 마커가 미세하게 어긋나는데, 그것은 모델 오차가 아니라 서보 처짐이라
+            # 이 컷의 주장을 흐린다. 검증 게이트 3 도 같은 이유로 mj_forward 를 쓴다.
+            #
+            # 높이는 스윙 최저점에서 발이 바닥에 닿는 값이다. 임의로 띄우면
+            # 로봇이 공중에서 발을 젓는 것으로 보인다.
+            d.qpos[2] = 0.264
             for kk, a in enumerate(adr):
                 d.qpos[a] = sg[kk] * th[kk]
             mujoco.mj_forward(m, d)

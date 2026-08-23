@@ -209,9 +209,14 @@ def cut2(seconds=6.0):
     for i in range(n):
         ph = 2 * np.pi * i / n
         th = base.copy()
+        # 대각 쌍을 반주기 어긋나게 둔다. 네 다리를 같은 위상으로 움직이면
+        # 동시에 굽혔다 펴는 동작이 되어 "이 로봇은 이렇게 걷는다" 로 읽힌다.
+        # 이 컷의 화제는 걸음걸이가 아니라 마커인데 시선을 뺏긴다.
         for j, name in enumerate(JOINT_ORDER):
-            if name.endswith('_leg'):  th[j] = base[j] + 0.32 * np.sin(ph)
-            if name.endswith('_foot'): th[j] = base[j] - 0.32 * np.sin(ph)
+            leg = name.split('_')[0]
+            p_ = ph + (np.pi if leg in ('FR', 'RL') else 0.0)
+            if name.endswith('_leg'):  th[j] = base[j] + 0.32 * np.sin(p_)
+            if name.endswith('_foot'): th[j] = base[j] - 0.32 * np.sin(p_)
         row = []
         for m, d, r in panes:
             adr = [m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, nm)]
@@ -366,7 +371,59 @@ def cut6(seconds=6.0):
     return out
 
 
-CUTS = {1: cut1, 2: cut2, 3: cut3, 4: cut4, 5: cut5, 6: cut6}
+# --- 컷 7. 시뮬 보행 (시나리오 17번, 실물과 좌우 분할용) ----------------
+def cut7(seconds=10.0):
+    """실물과 나란히 놓을 시뮬 보행. 8/20 실기와 같은 설정으로 돌린다.
+
+    시나리오 17번 자막이 "시뮬레이션과 실물을 같은 자로" 인데, 서 있는 모델이
+    도는 컷(cut3)을 실물 보행 옆에 붙이면 그 말이 성립하지 않는다. 같은 자로
+    쟀다는 근거는 같은 궤적 코드로 걸었을 때 속도가 맞았다는 것이다 —
+    실측 50mm/s, 시뮬 49mm/s (8/21).
+
+    실기 설정: 주기 1400ms, 스윙비율 0.143, 발 들어올림 20mm, 보폭 70mm,
+    피치 트림 +3. 몸통 높이는 95 — 당시 화면에는 110 이었으나 링크가 18mm
+    길게 잡혀 있어 실제 자세가 그것이다 (결정.md CC-1).
+
+    카메라는 옆에서 따라간다. 실물 촬영이 측면 고정이므로 붙였을 때 어색하지 않다.
+    """
+    from Kinematics.kinematicMotion import TrottingGait
+    from Common.gait_params import defaultParams, gaitPhases
+    from Kinematics.kinematics import Kinematic as K
+
+    m = mujoco.MjModel.from_xml_path(MJCF_SCENE)
+    d = mujoco.MjData(m)
+    r = mujoco.Renderer(m, H, W)
+    kin = K()
+    kb = dict(defaultParams(), Tt=1400.0, duty=0.143, Sh=20.0, height=95.0,
+              IDstepLength=-70.0, IDstepWidth=0.0, IDstepAlpha=0.0,
+              IDtrim=[3.0, 3.0, -3.0, -3.0])
+    g = TrottingGait(); g.Sh = kb['Sh']; g.t1, g.t3 = gaitPhases(kb)
+    aid = [mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, n) for n in JOINT_ORDER]
+    sg = jointSigns()
+    mujoco.mj_resetData(m, d)
+    d.qpos[2] = standingTrunkHeight() + 0.01
+    out = []
+    step = m.opt.timestep
+    for i in range(int(seconds * FPS)):
+        for _ in range(int(1.0 / FPS / step)):
+            th = np.asarray(kin.calcIK(g.positions(d.time, kb), (0, 0, 0),
+                                       (50, 40 + kb['height'], 0)), float)
+            tgt = sg * np.array([th[LEGS.index(n.split('_')[0])]
+                                 [JOINTS.index(n.split('_')[1])] for n in JOINT_ORDER])
+            if not np.isnan(tgt).any():
+                for k, a in enumerate(aid):
+                    d.ctrl[a] = tgt[k]
+            mujoco.mj_step(m, d)
+        look = d.xpos[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, 'trunk')].copy()
+        look[2] -= 0.05
+        r.update_scene(d, camera=camera(0.55, 90, -6, look))   # 정측면
+        out.append(r.render())
+    r.close()
+    print(f"    전진 {d.qpos[0]*1000:+.0f}mm / {seconds:.0f}초 = {d.qpos[0]/seconds*1000:+.0f}mm/s")
+    return out
+
+
+CUTS = {1: cut1, 2: cut2, 3: cut3, 4: cut4, 5: cut5, 6: cut6, 7: cut7}
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()

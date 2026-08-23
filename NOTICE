@@ -31,7 +31,13 @@ This product includes work developed by third parties.
         -> orocapangyo/SpotMicroJetson    (GPL-3.0)   OROCA 판교 스터디 공유 저장소
           -> robertchoi/oss_spotmicro     (본 저장소)
 
-  커밋 히스토리에 upstream 원 커밋이 보존되어 있습니다.
+  기구 설계의 뿌리는 KDY0523(김덕연)의 SpotMicro 이며 4장을 참조하십시오.
+
+  ※ 본 저장소는 상속 시점에 upstream 트리를 하나의 커밋으로 가져왔습니다(squash).
+    따라서 `git log` 와 `git blame` 은 원 저작자를 보여주지 않으며, 대부분의 파일이
+    이곳에서 작성된 것처럼 표시됩니다. 실제 저작은 위 계보와 3장의 경계 표에
+    따릅니다. 원 커밋 이력은 각 upstream 저장소에서 확인할 수 있습니다.
+
   upstream 원본 README: ./docs/UPSTREAM_README.md
 
 --------------------------------------------------------------------------------

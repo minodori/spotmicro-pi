@@ -15,7 +15,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Kinematics.kinematics import Kinematic                      # noqa: E402
 from rl.gen_mjcf import build                                     # noqa: E402
 from rl.model_api import (MJCF_SCENE, JOINT_ORDER, jointSigns,    # noqa: E402
-                          standingQpos, standingTheta, LEGS, JOINTS)
+                          standingQpos, standingTheta, standingTrunkHeight,
+                          jointRanges, LEGS, JOINTS)
 
 W, H, FPS = 1920, 1080, 30
 
@@ -259,7 +260,113 @@ def cut3(seconds=8.0):
     return out
 
 
-CUTS = {1: cut1, 2: cut2, 3: cut3}
+# --- 컷 4. 5cm 낙하 후 정착 ---------------------------------------------
+def cut4(seconds=5.0):
+    """기립 자세를 명령한 채로 떨어뜨려 서보가 받아내는 것을 보인다.
+
+    검증 게이트 5 가 매번 하는 것이다. 카메라를 고정해 몸통 높이가 실제로
+    가라앉았다 잡히는 것이 보이게 한다.
+    """
+    m = mujoco.MjModel.from_xml_path(MJCF_SCENE)
+    d = mujoco.MjData(m)
+    r = mujoco.Renderer(m, H, W)
+    q = standingQpos()
+    adr = [m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, n)]
+           for n in JOINT_ORDER]
+    aid = [mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, n) for n in JOINT_ORDER]
+    mujoco.mj_resetData(m, d)
+    d.qpos[2] = standingTrunkHeight() + 0.05         # 5cm 위에서
+    for k, a in enumerate(adr):
+        d.qpos[a] = q[k]
+        d.ctrl[aid[k]] = q[k]
+    # 카메라를 고정한다. 몸통을 따라가면 가라앉는 것이 안 보인다.
+    cam = camera(0.52, 152, -4, (0.0, 0.0, 0.16))
+    out = []
+    step = m.opt.timestep
+    for i in range(int(seconds * FPS)):
+        for _ in range(int(1.0 / FPS / step)):
+            mujoco.mj_step(m, d)
+        r.update_scene(d, camera=cam)
+        out.append(r.render())
+    r.close()
+    return out
+
+
+# --- 컷 5. 관절 12개 순차 구동 -------------------------------------------
+def cut5(seconds=10.0):
+    """관절을 하나씩 돌린다. 다리마다 shoulder -> leg -> foot 순서.
+
+    모델이 12자유도이고 각 관절이 어디를 움직이는지 한 번에 보여준다.
+    가동 범위는 실측 서보 영점에서 유도한 것이라, 여기서 도는 폭이 곧
+    실물이 낼 수 있는 폭이다.
+    """
+    m = mujoco.MjModel.from_xml_path(MJCF_SCENE)
+    d = mujoco.MjData(m)
+    r = mujoco.Renderer(m, H, W)
+    q = standingQpos()
+    rng = jointRanges(m)
+    adr = [m.jnt_qposadr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, n)]
+           for n in JOINT_ORDER]
+    out = []
+    n = int(seconds * FPS)
+    per = n // len(JOINT_ORDER)
+    for i in range(n):
+        j = min(i // per, len(JOINT_ORDER) - 1)
+        ph = (i % per) / per
+        qq = q.copy()
+        # 기립 자세에서 ±0.30 rad. 가동 범위 안으로 자른다.
+        qq[j] = float(np.clip(q[j] + 0.30 * np.sin(2 * np.pi * ph), *rng[j]))
+        mujoco.mj_resetData(m, d)
+        d.qpos[2] = 0.34                              # 띄워 둔다. 접촉이 자세를 흔든다
+        for k, a in enumerate(adr):
+            d.qpos[a] = qq[k]
+        mujoco.mj_forward(m, d)
+        r.update_scene(d, camera=camera(0.60, 140 + 24 * i / n, -12, (0, 0, 0.20)))
+        out.append(r.render())
+    r.close()
+    return out
+
+
+# --- 컷 6. 무게중심과 대각 지지선 ----------------------------------------
+def cut6(seconds=6.0):
+    """트롯이 버티는 선과 무게중심이 어긋나 있는 것을 보인다.
+
+    빨간 선이 대각선 두 발을 잇는 지지선, 노란 구가 무게중심이다. 트롯은
+    주기의 일부를 그 두 발로만 버티므로, 무게중심이 선 뒤에 있으면 뒤로 넘어간다.
+    8/20 에 실기에서 뒤로 몇 번 넘어진 것이 이것이고, 피치 트림이 그것을
+    상쇄하고 있었다.
+
+    숫자는 검증 게이트 7 이 매번 재는 것이다 (validate_mjcf.py).
+    """
+    m = mujoco.MjModel.from_xml_path(MJCF_SCENE)
+    d = mujoco.MjData(m)
+    r = mujoco.Renderer(m, H, W)
+    standModel(m, d)
+    sid = {l: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, f'{l}_foot') for l in LEGS}
+    out = []
+    n = int(seconds * FPS)
+    for i in range(n):
+        # 위에서 내려다보되 가까이 붙는다. 어긋남이 10.5mm 라 멀리서는 마커에
+        # 가려 안 보인다. 마커도 그 간격보다 작아야 한다.
+        r.update_scene(d, camera=camera(0.30, 178, -26 - 30 * i / n, (-0.03, 0, 0.03)))
+        fl, rr = d.site_xpos[sid['FL']].copy(), d.site_xpos[sid['RR']].copy()
+        fr, rl = d.site_xpos[sid['FR']].copy(), d.site_xpos[sid['RL']].copy()
+        for a, b in ((fl, rr), (fr, rl)):
+            a[2] = b[2] = 0.003
+            connector(r.scene, a, b, (0.95, 0.28, 0.20, 0.9), 0.0022)
+        cross = (fl + rr) / 2.0                       # 대각선이 만나는 점
+        com = d.subtree_com[1].copy()
+        marker(r.scene, [cross[0], cross[1], 0.003], (0.95, 0.28, 0.20, 1.0), 0.006)
+        marker(r.scene, [com[0], com[1], 0.003], (1.0, 0.85, 0.15, 1.0), 0.006)
+        # 둘을 잇는 선. 이 선의 길이가 어긋난 양이다.
+        connector(r.scene, [cross[0], cross[1], 0.003], [com[0], com[1], 0.003],
+                  (1.0, 1.0, 1.0, 0.95), 0.0016)
+        out.append(r.render())
+    r.close()
+    return out
+
+
+CUTS = {1: cut1, 2: cut2, 3: cut3, 4: cut4, 5: cut5, 6: cut6}
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()

@@ -1,3 +1,6 @@
+# ⚠ 상속받은 상태 그대로입니다. 이 파일의 상수를 고치지 마십시오.
+#   여기 값은 낡았고(l1=50 l3=100 l4=100 L=140 W=75), 그것이 증거입니다.
+#   현재 실측 상수는 Kinematics/kinematics.py 에 있습니다. Simulation/README.md 참조.
 '''
 Includes Walking Mechanism for quadruped robot
 '''

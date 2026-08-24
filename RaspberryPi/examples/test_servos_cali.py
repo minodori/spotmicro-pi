@@ -2,7 +2,7 @@ from adafruit_servokit import ServoKit
 import board
 import busio
 
-# RPi 5 / CM4: I2C1 (pins 3, 5) is board SDA, SCL
+# RPi 4B / 5: I2C1 (pins 3, 5) is board SDA, SCL
 print("Initializing Servos")
 i2c_bus0=(busio.I2C(board.SCL, board.SDA))
 print("Initializing ServoKit")

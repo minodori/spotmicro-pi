@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# 로컬 코드를 CM4 로 밀어넣는다.
+# 로컬 코드를 Pi 4B 로 밀어넣는다.
 #
 #   ./sync.sh          전송
 #   ./sync.sh -n       dry-run (뭐가 갈지만 보여주고 전송 안 함)
-#   ./sync.sh --pull   CM4 에서 rsync 흔적을 지우고 git pull (아래 설명)
+#   ./sync.sh --pull   Pi 4B 에서 rsync 흔적을 지우고 git pull (아래 설명)
 #
 # rsync 는 달라진 파일만 보낸다. -a 가 타임스탬프를 보존하므로
 # 두 번째 실행부터는 실제로 바뀐 파일만 목록에 나온다.
 #
 # --- rsync 와 git 이 부딪히는 지점 -------------------------------------
 #
-# CM4 에도 이 저장소의 git 사본이 있다. rsync 는 git 을 모르고 파일을 덮어쓰므로,
-# 나중에 CM4 에서 git pull 하면 이렇게 거부당한다:
+# Pi 4B 에도 이 저장소의 git 사본이 있다. rsync 는 git 을 모르고 파일을 덮어쓰므로,
+# 나중에 Pi 4B 에서 git pull 하면 이렇게 거부당한다:
 #
 #     error: Your local changes to the following files would be overwritten
 #     error: The following untracked working tree files would be overwritten
@@ -19,13 +19,13 @@
 # 내용이 달라서가 아니다. 밀어넣은 파일이 대개 커밋한 것과 같은 내용인데도,
 # git 은 그것을 "설명되지 않은 변경" 으로 본다. 지울 것이 없는데 멈춘 상태다.
 #
-# --pull 이 그 상황을 정리한다. 다만 무턱대고 지우지 않고, CM4 의 각 파일이
+# --pull 이 그 상황을 정리한다. 다만 무턱대고 지우지 않고, Pi 4B 의 각 파일이
 # origin 의 같은 파일과 내용이 같은지 먼저 확인한다. 하나라도 다르면
 # 멈추고 목록을 보여준다 - 그 경우는 로봇에서 직접 고친 것이 있다는 뜻이고,
 # 그건 사람이 판단해야 한다.
 #
 # 튜닝 중에는 ./sync.sh 로 즉시 반영하고, 세션이 끝나면 커밋한 뒤
-# ./sync.sh --pull 로 CM4 의 git 을 맞춰두면 두 경로가 어긋나지 않는다.
+# ./sync.sh --pull 로 Pi 4B 의 git 을 맞춰두면 두 경로가 어긋나지 않는다.
 set -euo pipefail
 
 REMOTE=${SPOT_REMOTE:-minodori@192.168.0.240}
@@ -81,6 +81,6 @@ rsync -avz --itemize-changes "$@" \
 
 cat <<'HINT'
 
-CM4 에서 git pull 이 필요해지면 ./sync.sh --pull 을 쓰세요.
+Pi 4B 에서 git pull 이 필요해지면 ./sync.sh --pull 을 쓰세요.
 rsync 가 남긴 변경을 origin 과 대조해 안전할 때만 정리하고 당겨옵니다.
 HINT

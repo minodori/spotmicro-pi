@@ -30,7 +30,7 @@ set -euo pipefail
 
 REMOTE=${SPOT_REMOTE:-minodori@192.168.0.240}
 DEST=${SPOT_DEST:-Projects/SpotMicroJetson/}
-DIRS="RaspberryPi Kinematics Common"
+DIRS="RaspberryPi Kinematics Common tools"
 
 if [ "${1:-}" = "--pull" ]; then
   ssh "$REMOTE" "cd '$DEST' && bash -s" <<'REMOTE_EOF'
@@ -75,6 +75,7 @@ fi
 rsync -avz --itemize-changes "$@" \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
+  --exclude='restore_oss_history.sh' \
   $DIRS \
   "$REMOTE:$DEST"
 

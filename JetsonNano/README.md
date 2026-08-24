@@ -5,8 +5,8 @@
 ## 왜 이름이 남아 있었나
 
 이 저장소는 Jetson Nano 를 대상으로 하던 시절의 이름을 물려받았습니다.
-실제 대상 보드는 **Raspberry Pi Compute Module 4 8GB** 입니다. Jetson Nano →
-Raspberry Pi 5 → CM4 로 두 번 옮겼고([work05](../study/minho/work05.md),
+실제 대상 보드는 **Raspberry Pi 4B 4GB** 입니다. Jetson Nano →
+Raspberry Pi 5 → 4B 로 두 번 옮겼고([work05](../study/minho/work05.md),
 [work07](../study/minho/work07.md), [work11](../study/minho/work11.md)),
 폴더 이름만 따라오지 못했습니다.
 
@@ -33,7 +33,7 @@ Raspberry Pi 5 → CM4 로 두 번 옮겼고([work05](../study/minho/work05.md),
 | `servo_controller_fix.py`<br>`servo_controller_modify.py`<br>`servo_controller_modify2.py` | 2026-07-26 업스트림 변형본. 어디서도 import 하지 않습니다. 실제로 도는 것은 `RaspberryPi/servo_controller.py` 하나입니다 |
 | `multiprocess_kb.py` | 죽은 사본. 보행 진입점은 `Common/multiprocess_kb.py` 를 import 합니다 (`Simulation/` 도 같은 것을 씁니다) |
 | `motor_test.py` | 참조하는 곳 없음 |
-| `requirements.txt` | `numpy==1.13.3` 등 Jetson 시절 고정값. CM4 는 Python 3.12 를 씁니다 |
+| `requirements.txt` | `numpy==1.13.3` 등 Jetson 시절 고정값. 4B 는 Python 3.12 를 씁니다 |
 | `fonts/` (8.9MB) | Jetson 시절 OLED 표시용. 지금 코드가 쓰지 않습니다 |
 | `legacy/` | Jetson 부팅·모드·OLED·MPU6050 코드. import 하는 곳 없음 |
 

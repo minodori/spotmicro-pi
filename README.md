@@ -89,7 +89,7 @@ uv run python -m rl.eval --run checkpoints --command 0.2 0 0
 ### 로봇이 있어야 하는 것
 
 ```bash
-python RaspberryPi/start_automatic_gait.py    # Raspberry Pi CM4 에서
+python RaspberryPi/start_automatic_gait.py    # Raspberry Pi 4B 에서
 ```
 
 부품이 저희와 다르다면 **버그가 아니라 정상적인 포크입니다.** 자기 치수를
@@ -123,7 +123,7 @@ oss_spotmicro/
 ├── Kinematics/             역기구학 — 실측 링크 길이로 정정     [상속+수정]
 ├── RaspberryPi/            서보 제어 · PCA9685 · 캘리브레이션    [상속+수정]
 │                             디렉터리명은 upstream 유래.
-│                             현재 대상 보드는 Raspberry Pi CM4
+│                             현재 대상 보드는 Raspberry Pi 4B
 ├── study/                  개발 일지 — 3인 11주                       [신규]
 ├── docs/                   하드웨어 문서 · 배선도 · 데모 미디어        [신규]
 ├── checkpoints/            학습된 정책 가중치                          [신규]
@@ -151,7 +151,7 @@ oss_spotmicro/
 
 | 담당 | 경로 | 주요 내용 |
 |---|---|---|
-| minho | [`study/minho/`](study/minho/) work01~11 | 서보 선정, 조립, 전원 재설계, PCA9685 핀맵, **실측 기반 기구학 정정**, CM4 전환 |
+| minho | [`study/minho/`](study/minho/) work01~11 | 서보 선정, 조립, 전원 재설계, PCA9685 핀맵, **실측 기반 기구학 정정**, 4B 전환 |
 | iru-han | [`study/iru-han/`](study/iru-han/) week01~12 | 기구학, 트로팅 보행, **물리엔진 벤치마크**, MuJoCo 환경 |
 | robert | [`study/robert/`](study/robert/) week01~10 | 기구학·보행 실습, **MuJoCo/SB3 학습 파이프라인**, uv 프로젝트 구성 |
 
@@ -202,7 +202,7 @@ apart. Eight gates check the generated model before any training runs; the stric
 compares forward kinematics between the two and requires agreement to 0.0000 mm.
 
 On that corrected model, a walking policy is trained in **MuJoCo** and targets a
-**Raspberry Pi Compute Module 4** driving twelve hobby position servos over two PCA9685
+**Raspberry Pi 4B** driving twelve hobby position servos over two PCA9685
 boards. Actions are joint angle offsets rather than torques, because the hardware cannot
 accept torque commands. Every component of the stack is OSI-approved open source and the
 whole pipeline runs **without a GPU**.

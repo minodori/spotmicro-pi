@@ -46,6 +46,18 @@ PARAM_FILE = os.path.expanduser("~/.spotmicro_gait.json")
 #   IDtrim : 값 자체보다 다리 사이 "차이" 가 중요하다. 차이가 Sh 에 육박하면 높은 발이
 #            접지하지 못해 반대 대각선으로 넘어진다.
 #
+#            기본값이 피치 +4 다 (앞 두 다리를 4mm 짧게, 뒤 두 다리를 4mm 길게).
+#            0 이 아닌 이유는 이 로봇의 무게중심이 대각 지지선보다 10.4mm 뒤에
+#            있기 때문이다 (rl/validate_mjcf.py 게이트 7). 트롯은 주기의 일부를
+#            대각선 두 발로만 버티는데, 그 선보다 무게중심이 뒤면 뒤로 넘어간다.
+#            실기에서 매번 손으로 넣던 값이라 시작점으로 옮겼다.
+#
+#            근본 해결은 발 위치다. Fo 117.5->107.5, Ro 67.5->77.5 로 앞뒤 발을
+#            10mm 씩 뒤로 옮기면 교차점이 무게중심 위로 와 트림 0 에서 균형이
+#            맞는다(차이 +0.3mm). 다만 그러면 잘 걷는 설정이 통째로 바뀌므로
+#            대회 마감 뒤에 한다. 더 나은 방법은 배터리·보드를 앞으로 옮겨
+#            무게중심 자체를 전진시키는 것이다 (work11 §6.18, 서보 여유 손실 없음).
+#
 #   Tt/duty: 궤적 타이밍. t1(접지)/t3(스윙) 을 직접 노출하지 않고 이 둘로 노출한다.
 #            t1/t3 은 서로 얽혀 있어 하나만 만지면 다른 축까지 움직인다 —
 #            work11 §6.16.1 이 "t3 만 올리면 네발지지가 반 토막 난다" 고 적어둔 함정이다.
@@ -63,7 +75,7 @@ PARAM_FILE = os.path.expanduser("~/.spotmicro_gait.json")
 #            예: Tt 2800 / duty 0.143 / Sh 30 -> t3 400, 네발지지 71% 유지,
 #                슬루율은 오히려 25% 감소. 대가는 속도이므로 Sl 을 키워 보상한다.
 DEFAULTS = {
-    'IDtrim': ([0.0, 0.0, 0.0, 0.0], None, None),   # 다리별 y 트림 (mm)
+    'IDtrim': ([4.0, 4.0, -4.0, -4.0], None, None),  # 다리별 y 트림 (mm). 피치 +4
     'Sh': (20.0, 5.0, 40.0),                        # 발 들어올림 (mm)
     'height': (95.0, 60.0, 105.0),                  # bodyPosition y = 40 + height
     'Tt': (1400.0, 800.0, 3600.0),                  # 보행 한 주기 (ms)
@@ -111,14 +123,16 @@ def clampParams(p):
             p[k] = max(lo, min(hi, float(p[k])))
         except (TypeError, ValueError):
             p[k] = dflt
+    # 깨진 값은 0 이 아니라 기본 트림으로 되돌린다. 0 으로 두면 무게중심이
+    # 대각 지지선보다 뒤인 채로 걷게 되어 뒤로 넘어간다 (위 IDtrim 주석).
     trim = p.get('IDtrim')
     if not isinstance(trim, list) or len(trim) != 4:
-        p['IDtrim'] = [0.0] * 4
+        p['IDtrim'] = list(DEFAULTS['IDtrim'][0])
     else:
         try:
             p['IDtrim'] = [float(x) for x in trim]
         except (TypeError, ValueError):
-            p['IDtrim'] = [0.0] * 4
+            p['IDtrim'] = list(DEFAULTS['IDtrim'][0])
     return p
 
 

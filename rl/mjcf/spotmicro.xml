@@ -25,7 +25,7 @@
           <joint name="FL_leg" axis="0 1 0" range="-1.449 1.693"/>
           <geom name="FL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="FL_lower" pos="0 0 -0.1100">
-            <joint name="FL_foot" axis="0 1 0" range="-2.880 0.262"/>
+            <joint name="FL_foot" axis="0 1 0" range="-2.932 0.209"/>
             <geom name="FL_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1350" size="0.011"/>
             <geom name="FL_foot" type="sphere" mass="0.005" pos="0 0 -0.1350" size="0.012" solref="0.015 1"/>
             <site name="FL_foot" type="sphere" size="0.018" pos="0 0 -0.1350"/>
@@ -34,7 +34,7 @@
       </body>
 
       <body name="FR_hip" pos="0.0925 -0.0390 0">
-        <joint name="FR_shoulder" axis="1 0 0" range="-1.658 1.484"/>
+        <joint name="FR_shoulder" axis="1 0 0" range="-1.728 1.414"/>
         <geom name="FR_hip" type="capsule" mass="0.1" fromto="0 0 0 0 -0.0560 0" size="0.018"/>
         <body name="FR_upper" pos="0 -0.0560 -0.0200">
           <joint name="FR_leg" axis="0 1 0" range="-1.693 1.449"/>
@@ -49,13 +49,13 @@
       </body>
 
       <body name="RL_hip" pos="-0.0925 0.0390 0">
-        <joint name="RL_shoulder" axis="1 0 0" range="-1.606 1.536"/>
+        <joint name="RL_shoulder" axis="1 0 0" range="-1.518 1.623"/>
         <geom name="RL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
         <body name="RL_upper" pos="0 0.0560 -0.0200">
-          <joint name="RL_leg" axis="0 1 0" range="-1.588 1.553"/>
+          <joint name="RL_leg" axis="0 1 0" range="-1.606 1.536"/>
           <geom name="RL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="RL_lower" pos="0 0 -0.1100">
-            <joint name="RL_foot" axis="0 1 0" range="-2.862 0.279"/>
+            <joint name="RL_foot" axis="0 1 0" range="-3.072 0.070"/>
             <geom name="RL_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1350" size="0.011"/>
             <geom name="RL_foot" type="sphere" mass="0.005" pos="0 0 -0.1350" size="0.012" solref="0.015 1"/>
             <site name="RL_foot" type="sphere" size="0.018" pos="0 0 -0.1350"/>

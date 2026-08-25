@@ -20,16 +20,23 @@
 
   ringlog.py <파일> [--new]     --new 면 기존 파일을 비우고 시작한다
 
+이어쓰기가 기본이라 한 파일에 여러 세션이 쌓인다. 그래서 실행할 때마다 구분줄을
+넣는다 - 파일 가운데를 열면 어느 세션인지 알 수 없어서 값이 굳은 것처럼 보인다
+(8/25 에 실제로 그렇게 읽혔다).
+
 (이름은 시간창 시절 것이 남았다. 촬영 주간에 명령줄을 바꾸지 않으려고 그대로 둔다.)
 
-프레임 경계는 상태판의 '=' 줄이다. 이 도구는 이 프로그램 전용이므로 그 정도의
-결합은 의도한 것이다. 구분선이 안 보이면 줄 단위 비교로 자동 강등한다.
+프레임 경계는 result_dict 줄이다. 루프마다 정확히 한 번, 맨 앞에 찍힌다.
+처음에는 상태판의 '=' 줄로 잡았는데 그것은 루프당 두 번 나와서, 프레임이
+상태판 / 나머지로 번갈아 잡히고 서로 다른 종류끼리 비교되어 **중복 제거가 한 번도
+걸리지 않았다** (8/25, 37MB / 축약 0 건). 그 줄이 안 보이면 줄 단위로 강등한다.
 """
 import os
 import sys
+import time
 
 
-DELIM = '=' * 20        # 상태판 구분선의 앞부분. 길이가 바뀌어도 걸린다
+MARK = "'IDstepLength'"     # 루프 맨 앞의 result_dict. 루프당 정확히 한 번 나온다
 
 
 def main():
@@ -45,10 +52,14 @@ def main():
         pass
 
     out = open(path, mode)
+    out.write("\n===== 세션 시작 %s =====\n"
+              % time.strftime("%Y-%m-%d %H:%M:%S"))
+    out.flush()
+
     cur = []            # 모으는 중인 프레임
     prev = None         # 직전에 파일에 쓴 프레임
     repeat = 0          # 그 뒤로 같은 프레임이 몇 번 왔는가
-    sawDelim = False
+    sawMark = False
 
     def commit():
         """모은 프레임을 확정한다. 직전과 같으면 세기만 한다."""
@@ -69,12 +80,12 @@ def main():
     try:
         for line in sys.stdin:
             sys.stdout.write(line)          # tee 와 같다. 화면이 먼저다
+            if MARK in line:
+                commit()                    # 새 루프가 시작됐다 - 앞 프레임을 확정
+                sawMark = True
             cur.append(line)
-            # 구분선을 못 봤으면 줄 하나를 프레임으로 친다
-            if line.startswith(DELIM) or not sawDelim:
-                if line.startswith(DELIM):
-                    sawDelim = True
-                commit()
+            if not sawMark:
+                commit()                    # 아직 마커를 못 봤다 - 줄 단위로 강등
     except KeyboardInterrupt:
         pass
     finally:
@@ -82,6 +93,8 @@ def main():
             commit()
             if repeat:
                 out.write("... 같은 상태 %d 회 반복 ...\n" % repeat)
+            out.write("===== 세션 끝 %s =====\n"
+                      % time.strftime("%Y-%m-%d %H:%M:%S"))
             out.close()
         except OSError:
             pass

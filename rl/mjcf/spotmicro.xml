@@ -22,7 +22,7 @@
         <joint name="FL_shoulder" axis="1 0 0" range="-1.449 1.693"/>
         <geom name="FL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
         <body name="FL_upper" pos="0 0.0560 -0.0200">
-          <joint name="FL_leg" axis="0 1 0" range="-1.414 1.728"/>
+          <joint name="FL_leg" axis="0 1 0" range="-1.361 1.780"/>
           <geom name="FL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="FL_lower" pos="0 0 -0.1100">
             <joint name="FL_foot" axis="0 1 0" range="-2.932 0.209"/>
@@ -37,7 +37,7 @@
         <joint name="FR_shoulder" axis="1 0 0" range="-1.658 1.484"/>
         <geom name="FR_hip" type="capsule" mass="0.1" fromto="0 0 0 0 -0.0560 0" size="0.018"/>
         <body name="FR_upper" pos="0 -0.0560 -0.0200">
-          <joint name="FR_leg" axis="0 1 0" range="-1.518 1.623"/>
+          <joint name="FR_leg" axis="0 1 0" range="-1.676 1.466"/>
           <geom name="FR_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="FR_lower" pos="0 0 -0.1100">
             <joint name="FR_foot" axis="0 1 0" range="-2.705 0.436"/>

@@ -42,7 +42,10 @@ servo_controller.py 는 adafruit/board 를 import 하므로 로봇 밖에서는 
 # 2026-08-25 혼 교체 뒤 재캘리브레이션. RL-Lower 160->169, RL-Upper +5,
 # FL-Upper +8, RR-Lower -3, RR-Upper -6. 이전 값:
 # SERVO_OFFSETS = [168, 78, 83, 25, 84, 95, 160, 90, 93, 23, 85, 79]
-SERVO_OFFSETS = [168, 86, 83, 25, 84, 95, 169, 95, 93, 20, 79, 79]
+# 2026-08-25 로봇에서 cal 로 잰 값 회수 (FL-Lower 168->169, RL-Lower 169->165).
+# 이전 값:
+# SERVO_OFFSETS = [168, 86, 83, 25, 84, 95, 169, 95, 93, 20, 79, 79]
+SERVO_OFFSETS = [169, 86, 83, 25, 84, 95, 165, 95, 93, 20, 79, 79]
 
 
 # 인덱스 5 (FR-Shoulder) 만 Futaba 25kg, 나머지 11개는 DS3235 35kg·cm.

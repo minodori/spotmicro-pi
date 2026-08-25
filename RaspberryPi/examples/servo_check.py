@@ -400,8 +400,55 @@ def show_offsets(offsets, measured):
         print("  아래 배열의 해당 항목은 이 스크립트의 DEFAULT_OFFSETS 값일 뿐이다.")
         print("  그대로 붙여넣으면 다른 실행에서 잰 값을 덮어쓸 수 있으니 주의할 것.")
         print("  전체를 다시 재려면 인덱스 없이:  servo_check.py cal")
-    print("\nCommon/servo_map.py 에 붙여넣을 값:")
-    print(f"SERVO_OFFSETS = {offsets}")
+    if writeOffsets(offsets):
+        print("\n  Common/servo_map.py 에 기록했다. 이제 home 이 이 값을 쓴다.")
+        print("  !! 노트북 저장소에도 같은 줄을 넣고 커밋할 것.")
+        print("     sync.sh 는 노트북 -> 로봇 한 방향이라, 다음 동기화에서")
+        print("     여기 쓴 값이 노트북의 옛 값으로 덮어써진다.")
+        print(f"\n  SERVO_OFFSETS = {offsets}")
+    else:
+        print("\nCommon/servo_map.py 에 붙여넣을 값:")
+        print(f"SERVO_OFFSETS = {offsets}")
+
+
+def writeOffsets(offsets):
+    """Common/servo_map.py 의 SERVO_OFFSETS 줄을 갈아끼운다.
+
+    예전에는 값을 화면에 찍고 사람이 붙여넣게 했다. 붙여넣기를 잊으면 cal 로
+    맞춘 것이 home 에서 그대로 사라진다 - 실패가 조용해서 캘리브레이션을 한
+    적이 없는 것처럼 보인다 (8/25). 화면에만 남기지 않는다.
+
+    옛 값은 주석으로 위에 남긴다. 되돌릴 때 git 을 안 봐도 되도록.
+    """
+    path = os.path.normpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "..",
+        "Common", "servo_map.py"))
+    try:
+        with open(path) as f:
+            lines = f.readlines()
+    except OSError as e:
+        print(f"  !! {path} 를 읽지 못했다: {e}")
+        return False
+
+    for i, ln in enumerate(lines):
+        if ln.startswith("SERVO_OFFSETS"):
+            lines[i] = ("# %s 캘리브레이션 이전 값:\n# %s\nSERVO_OFFSETS = %s\n"
+                        % (time.strftime("%Y-%m-%d"), ln.rstrip("\n"), offsets))
+            break
+    else:
+        print("  !! SERVO_OFFSETS 줄을 찾지 못했다. 손으로 넣어라.")
+        return False
+
+    # 같은 디렉터리에 쓰고 rename 한다. 도중에 죽어도 반쯤 쓰인 파일이 안 남는다.
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            f.writelines(lines)
+        os.replace(tmp, path)
+    except OSError as e:
+        print(f"  !! {path} 에 쓰지 못했다: {e}")
+        return False
+    return True
 
 
 def main():

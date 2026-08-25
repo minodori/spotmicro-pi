@@ -55,7 +55,7 @@
           <joint name="RL_leg" axis="0 1 0" range="-1.571 1.571"/>
           <geom name="RL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="RL_lower" pos="0 0 -0.1100">
-            <joint name="RL_foot" axis="0 1 0" range="-3.072 0.070"/>
+            <joint name="RL_foot" axis="0 1 0" range="-2.793 0.349"/>
             <geom name="RL_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1350" size="0.011"/>
             <geom name="RL_foot" type="sphere" mass="0.005" pos="0 0 -0.1350" size="0.012" solref="0.015 1"/>
             <site name="RL_foot" type="sphere" size="0.018" pos="0 0 -0.1350"/>

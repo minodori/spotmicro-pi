@@ -22,7 +22,7 @@
         <joint name="FL_shoulder" axis="1 0 0" range="-1.449 1.693"/>
         <geom name="FL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
         <body name="FL_upper" pos="0 0.0560 -0.0200">
-          <joint name="FL_leg" axis="0 1 0" range="-1.361 1.780"/>
+          <joint name="FL_leg" axis="0 1 0" range="-1.501 1.641"/>
           <geom name="FL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="FL_lower" pos="0 0 -0.1100">
             <joint name="FL_foot" axis="0 1 0" range="-2.932 0.209"/>
@@ -52,10 +52,10 @@
         <joint name="RL_shoulder" axis="1 0 0" range="-1.518 1.623"/>
         <geom name="RL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
         <body name="RL_upper" pos="0 0.0560 -0.0200">
-          <joint name="RL_leg" axis="0 1 0" range="-1.571 1.571"/>
+          <joint name="RL_leg" axis="0 1 0" range="-1.658 1.484"/>
           <geom name="RL_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="RL_lower" pos="0 0 -0.1100">
-            <joint name="RL_foot" axis="0 1 0" range="-2.793 0.349"/>
+            <joint name="RL_foot" axis="0 1 0" range="-2.950 0.192"/>
             <geom name="RL_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1350" size="0.011"/>
             <geom name="RL_foot" type="sphere" mass="0.005" pos="0 0 -0.1350" size="0.012" solref="0.015 1"/>
             <site name="RL_foot" type="sphere" size="0.018" pos="0 0 -0.1350"/>
@@ -67,10 +67,10 @@
         <joint name="RR_shoulder" axis="1 0 0" range="-1.763 1.379"/>
         <geom name="RR_hip" type="capsule" mass="0.1" fromto="0 0 0 0 -0.0560 0" size="0.018"/>
         <body name="RR_upper" pos="0 -0.0560 -0.0200">
-          <joint name="RR_leg" axis="0 1 0" range="-1.658 1.484"/>
+          <joint name="RR_leg" axis="0 1 0" range="-1.763 1.379"/>
           <geom name="RR_upper" type="capsule" mass="0.11" fromto="0 0 0 0 0 -0.1100" size="0.014"/>
           <body name="RR_lower" pos="0 0 -0.1100">
-            <joint name="RR_foot" axis="0 1 0" range="-2.740 0.401"/>
+            <joint name="RR_foot" axis="0 1 0" range="-2.793 0.349"/>
             <geom name="RR_lower" type="capsule" mass="0.04" fromto="0 0 0 0 0 -0.1350" size="0.011"/>
             <geom name="RR_foot" type="sphere" mass="0.005" pos="0 0 -0.1350" size="0.012" solref="0.015 1"/>
             <site name="RR_foot" type="sphere" size="0.018" pos="0 0 -0.1350"/>

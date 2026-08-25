@@ -19,7 +19,7 @@
       <site name="imu" pos="0 0 0"/>
 
       <body name="FL_hip" pos="0.0925 0.0390 0">
-        <joint name="FL_shoulder" axis="1 0 0" range="-1.414 1.728"/>
+        <joint name="FL_shoulder" axis="1 0 0" range="-1.344 1.798"/>
         <geom name="FL_hip" type="capsule" mass="0.1" fromto="0 0 0 0 0.0560 0" size="0.018"/>
         <body name="FL_upper" pos="0 0.0560 -0.0200">
           <joint name="FL_leg" axis="0 1 0" range="-1.449 1.693"/>

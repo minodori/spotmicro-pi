@@ -396,9 +396,10 @@ def show_offsets(offsets, measured):
 
     missing = [i for i in range(12) if i not in measured]
     if missing:
-        print(f"\n  주의: {len(missing)}개 관절이 이번 실행에서 측정되지 않았다: {missing}")
-        print("  아래 배열의 해당 항목은 이 스크립트의 DEFAULT_OFFSETS 값일 뿐이다.")
-        print("  그대로 붙여넣으면 다른 실행에서 잰 값을 덮어쓸 수 있으니 주의할 것.")
+        print(f"\n  이번에 측정하지 않은 관절 {len(missing)}개: {missing}")
+        print("  그 항목은 시작할 때 Common/servo_map.py 에서 읽은 값 그대로 쓴다.")
+        print("  한 관절씩 여러 번 돌려도 앞서 잰 값이 쌓인다 - 매번 파일을 다시 읽는다.")
+        print("  (다만 cal 이 도는 동안 그 파일을 손으로 고치면 그 편집은 덮인다.)")
         print("  전체를 다시 재려면 인덱스 없이:  servo_check.py cal")
     if writeOffsets(offsets):
         print("\n  Common/servo_map.py 에 기록했다. 이제 home 이 이 값을 쓴다.")

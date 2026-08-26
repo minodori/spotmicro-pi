@@ -27,11 +27,15 @@ This product includes work developed by third parties.
 
   FlorianWilk/SpotMicroAI                 (GPL-3.0)
     -> Road-Balance/SpotMicroJetson       (GPL-3.0)
-      -> robertchoi/SpotMicroJetson       (GPL-3.0)
+      -> robertchoi/SpotMicroJetson       (GPL-3.0)   스터디 개인 저장소
         -> orocapangyo/SpotMicroJetson    (GPL-3.0)   OROCA 판교 스터디 공유 저장소
           -> robertchoi/oss_spotmicro     (본 저장소)
 
   기구 설계의 뿌리는 KDY0523(김덕연)의 SpotMicro 이며 4장을 참조하십시오.
+
+  뒤의 세 칸은 같은 스터디 그룹의 저장소입니다. 독립적인 상류 저작자는
+  KDY0523(기구 설계), FlorianWilk(소프트웨어), Road-Balance(한양대) 셋입니다.
+  포크 체인은 GPL 귀속을 위해 그대로 적었습니다.
 
   ※ 본 저장소는 상속 시점에 upstream 트리를 하나의 커밋으로 가져왔습니다(squash).
     따라서 `git log` 와 `git blame` 은 원 저작자를 보여주지 않으며, 대부분의 파일이

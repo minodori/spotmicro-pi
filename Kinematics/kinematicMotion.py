@@ -187,7 +187,14 @@ class TrottingGait:
             return self.yawRotate(curLp,-self.Sa/2.0+self.Sa*tp)
         elif(t<self.t0+self.t1+self.t2):
             return endLp
-        elif(t<self.t0+self.t1+self.t2+self.t3): # Lift foot
+        else: # Lift foot
+            # else 여야 한다. elif(t < t0+t1+t2+t3) 로 두면 t 가 정확히 Tt 일 때
+            # 아무것도 반환하지 않고, positions() 의 np.array 가 그 None 을 만나
+            # 제어 루프가 죽는다. positions() 는 t2=(pt-Tt/2)%Tt 를 쓰는데,
+            # pt 가 Tt/2 보다 아주 조금 작으면 그 뺄셈이 -1e-13 이 되고
+            # (-1e-13) % 1400.0 은 부동소수 반올림으로 정확히 1400.0 을 낸다.
+            # tp 가 1 이면 이 분기는 startLp 를 그대로 돌려주므로 (들어올림 항도 0),
+            # 주기 시작점과 같은 값이다 - else 로 두는 것이 맞는 값이기도 하다.
             td=t-(self.t0+self.t1+self.t2)
             tp=td/self.t3   # 위와 동일한 이유
             diffLp=startLp-endLp

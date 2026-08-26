@@ -34,3 +34,4 @@ docs/media/*.mp4
 
 # 텔레그램 토큰·오프셋은 실행 환경에 속한다
 .tg_offset
+docs/build/

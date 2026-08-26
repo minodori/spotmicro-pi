@@ -61,3 +61,7 @@ train:
 
 clean:
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +
+
+docx:
+	uv run python tools/to_docx.py 결과보고서.md
+	uv run python tools/to_docx.py 결과보고서_초안.md

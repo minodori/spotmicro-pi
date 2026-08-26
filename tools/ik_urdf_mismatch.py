@@ -20,11 +20,16 @@ from kinematics import Kinematic  # noqa: E402
 # Simulation/kinematics.py:30-36 — 각도를 계산하는 몸
 IK = dict(l1=50, l2=20, l3=100, l4=100)
 
-# urdf/spotmicroai_gen.urdf.xml 의 joint origin — 화면에 그려지는 몸
+# urdf/spotmicroai_gen.urdf.xml — 화면에 그려지고 물리가 풀리는 몸
 #   front_left_leg   xyz="0 -0.052 0"      l1=52, l2=0 (수직 낙차가 없다)
 #   front_left_foot  xyz="-0.01 0 -0.12"   l3=sqrt(10^2+120^2)=120.4
-#   front_left_toe   xyz="0 0 -0.115"      l4=115
-URDF = dict(l1=52, l2=0, l3=120.4, l4=115)
+#   front_left_toe   xyz="0 0 -0.115"      + front_left_toe_link 의
+#                                            collision sphere radius=0.02
+#                                          -> 무릎축에서 접지점까지 135
+#
+# l4 는 반드시 접지점까지 재야 한다. 조인트 원점 115 를 우리 실측 135(무릎축->
+# 발바닥)와 비교하면 없는 차이가 생긴다. 두 값은 같은 것을 재지 않는다.
+URDF = dict(l1=52, l2=0, l3=120.4, l4=135)
 
 W_FOOT = 75 + 5 + 40  # Simulation/spotmicroai.py:104 — 발끝 목표의 좌우 간격
 
@@ -52,7 +57,7 @@ def main():
     lift = [r[1] for r in rows]
     print(f"자세 {len(rows)}개 (몸통높이 80~120mm x 발 앞뒤 -60~120mm)")
     print(f"  발 위치 오차   최소 {dist[0]:.1f}  중앙 {dist[len(dist) // 2]:.1f}  최대 {dist[-1]:.1f} mm")
-    print(f"  발 높이 오차   {min(lift):+.1f} ~ {max(lift):+.1f} mm  (부호가 한쪽이면 착지가 매번 어긋난다)")
+    print(f"  발 높이 오차   {min(lift):+.1f} ~ {max(lift):+.1f} mm")
 
 
 if __name__ == "__main__":

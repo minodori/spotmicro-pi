@@ -26,7 +26,7 @@ from rl import model_api as M
 from rl.envs import config as C
 from rl.envs.spotmicro_walk import SpotMicroWalkEnv
 
-SERVO_RATED_SLEW = 545.0     # DS3235 무부하 정격 (deg/s)
+from Common.servo_map import SERVO_RATED_SLEW   # 6V 에서 500도/s
 
 
 def _obs_mode_of(run: Path) -> str:

@@ -21,6 +21,7 @@ import servo_controller
 
 from multiprocessing import Process
 from Common.gait_params import gaitPhases, supportRatio
+from Common.servo_map import SERVO_RATED_SLEW
 from Common.multiprocess_kb import (KeyInterrupt, keyboardAvailable,
                                     trimModes, TWIST_WARN_RATIO)
 from Common.web_control import startWebControl
@@ -242,16 +243,17 @@ def main(id, command_status, keyInputs=None):
         # 주기와 스윙 비율. 이 둘이 "얼마나 높이 드느냐" 와 "안 넘어지느냐" 를 정한다.
         #   네발지지가 낮을수록 대각 두 발로 버티는 시간이 길어진다. IMU 가 없으므로
         #   50% 아래로 내려가면 주저앉기 시작한다 (work11 6.16.1).
-        #   슬루율은 무릎이 요구받는 각속도다. DS3235 무부하 정격이 545도/s 다.
+        #   슬루율은 무릎이 요구받는 각속도다. 정격은 Common/servo_map.py 에 있다
+        #   (6V 에서 500도/s. 전압마다 다르므로 숫자만 옮겨 적지 말 것).
         support = supportRatio(duty) * 100
         speed = abs(result_dict['IDstepLength']) / (trotting.t1 + trotting.t3) * 1000
         supportWarn = "  <-- 낮다. 대각 두 발로 버티는 시간이 길다" if support < 50 else ""
-        slewWarn = ("  <-- 정격 초과!!" if slew > 545
-                    else "  <-- 정격의 90%" if slew > 490 else "")
+        slewWarn = ("  <-- 정격 초과!!" if slew > SERVO_RATED_SLEW
+                    else "  <-- 정격의 90%" if slew > SERVO_RATED_SLEW * 0.9 else "")
         print(f" 주기 {trotting.t1 + trotting.t3:.0f}ms (c 느리게 / v 빠르게)"
               f"   스윙비율 {duty:.2f} (b 늘림 / n 줄임)   t1/t3 {trotting.t1:.0f}/{trotting.t3:.0f}")
         print(f" 네발지지 {support:.0f}%{supportWarn}")
-        print(f" 무릎슬루 {slew:.0f}도/s (실측, 정격 545){slewWarn}"
+        print(f" 무릎슬루 {slew:.0f}도/s (실측, 정격 {SERVO_RATED_SLEW:.0f}){slewWarn}"
               f"      전진속도 {speed:.0f}mm/s (이론, 미끄러짐 0 가정)")
         print(" y/h 앞뒤기울기   u/j 좌우기울기   p 트림리셋   space 정지   Ctrl-C 종료")
         if ikFail:

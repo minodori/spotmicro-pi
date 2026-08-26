@@ -12,6 +12,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from Common.gait_params import DEFAULTS
+from Common.servo_map import SERVO_RATED_SLEW
 from Common.multiprocess_kb import TWIST_WARN_RATIO
 
 LEGS = ("FL", "FR", "RL", "RR")
@@ -108,7 +109,7 @@ button:active{background:#4a5261}
 <div class="st">
  보폭 <b id="sl">-</b>mm &nbsp; 좌우 <b id="sw">-</b>mm &nbsp; 회전 <b id="sa">-</b>°<br>
  <b id="mode">-</b> &nbsp; 대각 차이 <b id="spread">-</b>mm<br>
- 네발지지 <b id="sup">-</b>% &nbsp; 무릎슬루 <b id="slew">-</b>°/s (정격 545)<br>
+ 네발지지 <b id="sup">-</b>% &nbsp; 무릎슬루 <b id="slew">-</b>°/s (정격 <b id="rated">-</b>)<br>
  전진 <b id="spd">-</b>mm/s <span style="font-size:11px">이론값 — 실제 속도는 줄자로 재야 합니다</span>
 </div>
 
@@ -195,12 +196,15 @@ function draw(s){
  document.getElementById("sup").textContent=sup.toFixed(0);
  document.getElementById("slew").textContent=slew.toFixed(0);
  document.getElementById("spd").textContent=(Math.abs(s.IDstepLength)/s.Tt*1000).toFixed(0);
- // 위험 구간을 색으로 알린다. 545°/s 는 DS3235 무부하 정격.
+ // 위험 구간을 색으로 알린다. 정격은 /state 가 내려준다 (Common/servo_map.py,
+ // 6V 에서 500°/s). 페이지에 숫자를 적어두면 전압이 바뀔 때 여기만 남는다.
  // 네발지지 임계값은 실측이다. 50% 미만에서만 경고하다가 58% 에서 뒤로 넘어졌다
  // (2026-08-20, 스윙비율 0.21). work11 6.16.1 은 50% 에서 주저앉았다고 기록한다.
  // IMU 가 없어 로봇은 넘어진 것을 알지 못하므로 화면이 미리 알려야 한다.
  document.getElementById("sup").style.color=sup<55?"#e05050":sup<65?"#e0a030":"#e8e8ea";
- document.getElementById("slew").style.color=slew>545?"#e05050":slew>490?"#e0a030":"#e8e8ea";
+ const rated=s.servoRatedSlew||500;
+ document.getElementById("rated").textContent=rated.toFixed(0);
+ document.getElementById("slew").style.color=slew>rated?"#e05050":slew>rated*0.9?"#e0a030":"#e8e8ea";
 }
 for(const k in SLIDERS){
  document.getElementById(k).addEventListener("input",e=>{
@@ -218,6 +222,7 @@ def startWebControl(keyInputs, port=8080):
     def state():
         s = keyInputs.snapshot()
         s['twistRatio'] = TWIST_WARN_RATIO
+        s['servoRatedSlew'] = SERVO_RATED_SLEW
         # 슬라이더 범위를 여기서 내려준다. HTML 에 적어두면 DEFAULTS 와 어긋난다.
         s['ranges'] = {k: [lo, hi] for k, (_, lo, hi) in DEFAULTS.items() if lo is not None}
         s.update(getattr(keyInputs, 'runtime', {}))   # 제어 루프가 갱신하는 실시간 상태

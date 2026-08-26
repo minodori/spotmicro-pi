@@ -298,7 +298,19 @@ class SpotMicroWalkEnv(gym.Env):
             "undesired": w["undesired"] * self._undesired_contacts(),
             "alive": w["alive"],
         }
-        return sum(t.values()), {k: float(v) for k, v in t.items()}
+        total = sum(t.values())
+        # 음의 항 합이 양의 항을 넘으면 **에피소드를 끝내는 것이 이득**이 된다.
+        # 페널티는 살아 있는 동안만 쌓이므로, 정책은 보행이 아니라 조기 종료를
+        # 학습한다 (80만 스텝 ep_len 10~14 로 확인). 탐색을 넓히려고 초기 std 를
+        # 키우면 흔들림 페널티가 커져 이 함정에 바로 빠지고, std 를 줄이면
+        # 이번에는 발이 땅에서 안 떨어져 전진을 발견하지 못한다 (2천만 스텝,
+        # 명령을 무시하는 상수 정책으로 수렴).
+        #
+        # 합을 0 에서 자르면 두 국소 최적 사이의 딜레마가 사라진다. 넘어짐은
+        # step() 의 FALL_PENALTY 로 따로 처벌하므로 종료 유인은 남지 않는다.
+        if C.ONLY_POSITIVE_REWARDS:
+            total = max(total, 0.0)
+        return total, {k: float(v) for k, v in t.items()}
 
     def _limit_violation(self) -> float:
         """가동 한계 근처에 들어간 정도 (rad). 여유를 절대 각도로 잡는다."""

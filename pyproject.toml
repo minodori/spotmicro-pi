@@ -1,0 +1,51 @@
+# 의존성 선언. 정본은 uv.lock 이고 이 파일은 그 입력이다.
+#
+#   uv sync                  학습·시뮬 (노트북)
+#   uv sync --extra robot    실기 제어 (Raspberry Pi)
+#   uv export --no-hashes    전이 의존성까지 포함한 전체 목록 (SBOM)
+#
+# 버전을 == 로 못 박았다. 대회 심사에서 재현이 안 되면 아무것도 증명하지 못하고,
+# 이 저장소가 문제 삼는 것이 정확히 "값은 전달되는데 근거는 전달되지 않는다" 이다.
+[project]
+name = "spotmicro-kinetiq"
+version = "0.1.0"
+description = "SpotMicro 4족보행 - 실측 기반 단일 출처 기구 모델과 MuJoCo 강화학습"
+requires-python = ">=3.12"
+dependencies = [
+    "mujoco==3.11.0",
+    "gymnasium==1.3.0",
+    "stable-baselines3==2.9.0",
+    "torch==2.13.0",
+    "tensorboard==2.21.0",
+    "numpy==2.5.2",
+    "imageio==2.37.4",
+    "imageio-ffmpeg==0.6.0",
+    "matplotlib==3.11.1",
+]
+
+[project.optional-dependencies]
+# 라즈베리파이에서만 설치된다. x86 노트북에는 필요 없고 설치되지도 않는다.
+robot = [
+    "adafruit-circuitpython-servokit==1.3.24",
+    "adafruit-circuitpython-pca9685==3.4.22",
+    "keyboard==0.13.5",
+    "psutil==7.2.2",
+]
+
+# torch 를 CPU 빌드로 못 박는다.
+#
+# 이것을 선언하지 않으면 torch 가 stable-baselines3 의 전이 의존성으로 끌려오면서
+# 기본 인덱스의 CUDA 빌드가 설치되고 nvidia-* 패키지 15개가 따라온다 (2.5GB).
+# 실제로 개발 머신이 그 상태였다. 학습은 rl/train.py 의 기본값인 --device cpu 로
+# 돌았으므로 결과는 같지만, "GPU 가 필요 없다" 는 주장이 선언으로 뒷받침되지
+# 않는 상태였다. 심사자가 uv sync 만 하면 CPU 빌드를 받는다.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.setuptools]
+py-modules = []

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 822" width="1000" height="822">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a3a3e"/></marker></defs>
+<rect width="1000" height="822" fill="#ffffff"/>
+<rect x="30" y="28" width="940" height="132" rx="10" fill="#f4f9fd" stroke="#0f5c8c" stroke-width="1.6"/>
+<text x="50" y="54" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="15" fill="#0f5c8c" font-weight="600" text-anchor="start">① 측정값의 집 — 값마다 고칠 곳이 정확히 한 군데</text>
+<rect x="52" y="68" width="288" height="78" rx="6" fill="#ffffff" stroke="#0f5c8c" stroke-width="1.6"/>
+<text x="196" y="92" font-family="Noto Sans Mono CJK KR, monospace" font-size="14" fill="#0f5c8c" font-weight="600" text-anchor="middle">Kinematics/kinematics.py</text>
+<text x="196" y="112" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13" fill="#1c1c1e" font-weight="400" text-anchor="middle">링크 기하 (캘리퍼스 실측)</text>
+<text x="196" y="132" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">l1 56 · l2 20 · l3 110 · l4 135 · L 185 · W 78</text>
+<rect x="356" y="68" width="288" height="78" rx="6" fill="#ffffff" stroke="#0f5c8c" stroke-width="1.6"/>
+<text x="500" y="92" font-family="Noto Sans Mono CJK KR, monospace" font-size="14" fill="#0f5c8c" font-weight="600" text-anchor="middle">Common/servo_map.py</text>
+<text x="500" y="112" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13" fill="#1c1c1e" font-weight="400" text-anchor="middle">관절 범위 · 부호 · 영점</text>
+<text x="500" y="132" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">12개 인덱스 ↔ 다리·관절 대응</text>
+<rect x="660" y="68" width="288" height="78" rx="6" fill="#ffffff" stroke="#0f5c8c" stroke-width="1.6"/>
+<text x="804" y="92" font-family="Noto Sans Mono CJK KR, monospace" font-size="14" fill="#0f5c8c" font-weight="600" text-anchor="middle">rl/gen_mjcf.py:48</text>
+<text x="804" y="112" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13" fill="#1c1c1e" font-weight="400" text-anchor="middle">링크 질량</text>
+<text x="804" y="132" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">총 2.20 kg (실측)</text>
+<path d="M 500,160 L 500,186" fill="none" stroke="#3a3a3e" stroke-width="1.8"/>
+<path d="M 500,186 L 260,186 L 260,214" fill="none" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<path d="M 500,186 L 742,186 L 742,214" fill="none" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="30" y="218" width="452" height="300" rx="10" fill="#f4faf7" stroke="#1f6f4a" stroke-width="1.6"/>
+<text x="50" y="244" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="15" fill="#1f6f4a" font-weight="600" text-anchor="start">② 규칙 기반 보행 — 실물 검증 완료</text>
+<rect x="56" y="262" width="400" height="56" rx="6" fill="#ffffff" stroke="#1f6f4a" stroke-width="1.6"/>
+<text x="256" y="285" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="14" fill="#1c1c1e" font-weight="600" text-anchor="middle">역기구학 (legIK / bodyIK)</text>
+<text x="256" y="305" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="12" fill="#6b6b70" font-weight="400" text-anchor="middle">발끝 목표 좌표 → 관절 각도 12</text>
+<line x1="256" y1="318" x2="256" y2="344" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="56" y="346" width="400" height="50" rx="6" fill="#ffffff" stroke="#1f6f4a" stroke-width="1.6"/>
+<text x="256" y="366" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="14" fill="#1c1c1e" font-weight="600" text-anchor="middle">보행 궤적 생성</text>
+<text x="256" y="385" font-family="Noto Sans Mono CJK KR, monospace" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">보폭 −80 · 높이 90 · 주기 1300 · 듀티 0.32</text>
+<rect x="56" y="424" width="400" height="76" rx="6" fill="#ffffff" stroke="#6b6b70" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="256" y="448" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13.5" fill="#1c1c1e" font-weight="600" text-anchor="middle">폰 웹 브라우저 실시간 튜닝</text>
+<text x="256" y="467" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">보폭 · 높이 · 주기 · 듀티 · 다리별 트림</text>
+<text x="256" y="486" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11" fill="#6b6b70" font-weight="400" text-anchor="middle">네 발 지지율과 무릎 각속도를 함께 표시, 정격 초과 시 경고</text>
+<path d="M 256,424 L 256,400" fill="none" stroke="#3a3a3e" stroke-width="1.5" marker-end="url(#ah)" stroke-dasharray="5 4"/>
+<rect x="512" y="218" width="458" height="300" rx="10" fill="#f9f6fc" stroke="#6a3fa0" stroke-width="1.6"/>
+<text x="532" y="244" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="15" fill="#6a3fa0" font-weight="600" text-anchor="start">③ 강화학습 — 파이프라인 · 이식 판정</text>
+<rect x="538" y="262" width="406" height="50" rx="6" fill="#ffffff" stroke="#6a3fa0" stroke-width="1.6"/>
+<text x="741" y="282" font-family="Noto Sans Mono CJK KR, monospace" font-size="13" fill="#1c1c1e" font-weight="600" text-anchor="middle">rl/gen_mjcf.py  →  rl/mjcf/spotmicro.xml</text>
+<text x="741" y="300" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">URDF 를 변환하지 않고 상수에서 생성한다</text>
+<line x1="741" y1="312" x2="741" y2="330" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="538" y="332" width="406" height="46" rx="6" fill="#fdf4f3" stroke="#b3261e" stroke-width="1.6"/>
+<text x="741" y="351" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13.5" fill="#b3261e" font-weight="700" text-anchor="middle">검증 게이트 8종  ·  make verify</text>
+<text x="741" y="369" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#b3261e" font-weight="400" text-anchor="middle">하나라도 실패하면 학습이 시작되지 않는다</text>
+<line x1="741" y1="378" x2="741" y2="396" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="538" y="398" width="406" height="50" rx="6" fill="#ffffff" stroke="#6a3fa0" stroke-width="1.6"/>
+<text x="741" y="418" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13" fill="#1c1c1e" font-weight="600" text-anchor="middle">PPO 학습 (MuJoCo · Stable-Baselines3)</text>
+<text x="741" y="436" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">관측 enc 45차원  vs  hist 69차원 을 같은 조건에서 비교</text>
+<line x1="741" y1="448" x2="741" y2="466" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="538" y="468" width="406" height="46" rx="6" fill="#ffffff" stroke="#6a3fa0" stroke-width="1.6"/>
+<text x="741" y="487" font-family="Noto Sans Mono CJK KR, monospace" font-size="13" fill="#1c1c1e" font-weight="600" text-anchor="middle">정책  checkpoints/policy.zip</text>
+<text x="741" y="505" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#6b6b70" font-weight="400" text-anchor="middle">관절 각도 변위 12 출력 · 50 Hz 추론</text>
+<path d="M 256,500 L 256,556 L 480,556" fill="none" stroke="#3a3a3e" stroke-width="2.0"/>
+<path d="M 741,514 L 741,556 L 522,556" fill="none" stroke="#3a3a3e" stroke-width="2.0"/>
+<path d="M 500,556 L 500,586" fill="none" stroke="#3a3a3e" stroke-width="2.0" marker-end="url(#ah)"/>
+<rect x="250" y="590" width="500" height="52" rx="8" fill="#f6f6f7" stroke="#1c1c1e" stroke-width="1.6"/>
+<text x="500" y="613" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="15" fill="#1c1c1e" font-weight="700" text-anchor="middle">같은 서보 인터페이스 — 관절 각도 12</text>
+<text x="500" y="632" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="12" fill="#6b6b70" font-weight="400" text-anchor="middle">두 방식을 같은 하드웨어에서 직접 비교할 수 있다</text>
+<line x1="500" y1="642" x2="500" y2="670" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="30" y="672" width="940" height="122" rx="10" fill="#fdfaf3" stroke="#8a5a00" stroke-width="1.6"/>
+<text x="50" y="698" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="15" fill="#8a5a00" font-weight="600" text-anchor="start">④ 실물</text>
+<rect x="60" y="710" width="250" height="54" rx="6" fill="#ffffff" stroke="#8a5a00" stroke-width="1.6"/>
+<text x="185.0" y="732" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13.5" fill="#1c1c1e" font-weight="600" text-anchor="middle">Raspberry Pi 4B 4GB</text>
+<text x="185.0" y="751" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11" fill="#6b6b70" font-weight="400" text-anchor="middle">Ubuntu 24.04 · aarch64</text>
+<rect x="356" y="710" width="250" height="54" rx="6" fill="#ffffff" stroke="#8a5a00" stroke-width="1.6"/>
+<text x="481.0" y="732" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13.5" fill="#1c1c1e" font-weight="600" text-anchor="middle">PCA9685 ×2</text>
+<text x="481.0" y="751" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11" fill="#6b6b70" font-weight="400" text-anchor="middle">I2C 0x40 / 0x41 · 쓰기 전용</text>
+<rect x="652" y="710" width="288" height="54" rx="6" fill="#ffffff" stroke="#8a5a00" stroke-width="1.6"/>
+<text x="796.0" y="732" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="13.5" fill="#1c1c1e" font-weight="600" text-anchor="middle">서보 12개</text>
+<text x="796.0" y="751" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11" fill="#6b6b70" font-weight="400" text-anchor="middle">DS3235 ×9 · CLS6336HV ×2 · Futaba ×1  (6V)</text>
+<line x1="316" y1="737" x2="350" y2="737" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<line x1="612" y1="737" x2="646" y2="737" stroke="#3a3a3e" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="500" y="783" font-family="Noto Sans CJK KR, Noto Sans CJK HK, sans-serif" font-size="11.5" fill="#b3261e" font-weight="400" text-anchor="middle">화살표가 한 방향뿐이다. 관절 위치를 되읽을 수 없어 표준 관측의 절반이 실물에 없고, 그래서 ③ 이 enc 와 hist 를 나눠 비교한다.</text>
+</svg>

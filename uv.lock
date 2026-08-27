@@ -3864,6 +3864,12 @@ wheels = [
 ]
 
 [[package]]
+name = "rpi-gpio"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/0f/10b524a12b3445af1c607c27b2f5ed122ef55756e29942900e5c950735f2/RPi.GPIO-0.7.1.tar.gz", hash = "sha256:cd61c4b03c37b62bba4a5acfea9862749c33c618e0295e7e90aa4713fb373b70", size = 29090, upload-time = "2022-02-06T15:15:06.022Z" }
+
+[[package]]
 name = "setuptools"
 version = "84.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3904,6 +3910,7 @@ robot = [
     { name = "adafruit-circuitpython-servokit" },
     { name = "keyboard" },
     { name = "psutil" },
+    { name = "rpi-gpio", marker = "platform_machine in 'aarch64 armv7l armv6l' and sys_platform == 'linux'" },
 ]
 
 [package.metadata]
@@ -3918,6 +3925,7 @@ requires-dist = [
     { name = "mujoco", specifier = "==3.11.0" },
     { name = "numpy", specifier = "==2.5.2" },
     { name = "psutil", marker = "extra == 'robot'", specifier = "==7.2.2" },
+    { name = "rpi-gpio", marker = "platform_machine in 'aarch64 armv7l armv6l' and sys_platform == 'linux' and extra == 'robot'", specifier = "==0.7.1" },
     { name = "stable-baselines3", specifier = "==2.9.0" },
     { name = "tensorboard", specifier = "==2.21.0" },
     { name = "torch", specifier = "==2.13.0", index = "https://download.pytorch.org/whl/cpu" },

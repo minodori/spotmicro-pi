@@ -28,6 +28,11 @@ dependencies = [
 robot = [
     "adafruit-circuitpython-servokit==1.3.24",
     "adafruit-circuitpython-pca9685==3.4.22",
+    # Blinka 가 GPIO 를 잡는 플랫폼 라이브러리. 이것이 없으면 adafruit_servokit 이
+    # import 에서 죽는다 ("The platform library 'RPi' was not found"). 2026-08-27 에
+    # 라즈베리파이에서 uv sync --extra robot 을 실제로 돌려보고서야 발견했다.
+    # x86 에서는 빌드되지 않으므로 ARM 리눅스에서만 설치한다.
+    "RPi.GPIO==0.7.1 ; platform_system == 'Linux' and platform_machine in 'aarch64 armv7l armv6l'",
     "keyboard==0.13.5",
     "psutil==7.2.2",
 ]

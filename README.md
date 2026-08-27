@@ -133,13 +133,34 @@ oss_spotmicro/
 ├── checkpoints/            학습된 정책 가중치                          [신규]
 ├── Simulation/             PyBullet — 초기 검증용                      [상속]
 ├── urdf/                   초기 URDF (학습에는 rl/mjcf/ 사용)          [상속]
-├── STL/ STEP_Files/ Parts/ 3D 기구 설계 — CC BY 3.0                    [상속]
-│   └── STL/kinetiq/          본 팀 설계 파트 (거치대·마운팅 플레이트)  [신규]
+├── STL/                    3D 기구 설계 — CC BY 3.0                    [상속]
+│   ├── files/                KDY 원본 판  ← 본 팀이 출력한 것
+│   ├── lidar/                라이다 마운트 (본 팀 미사용)
+│   ├── kinetiq/              본 팀 설계 파트 (거치대·마운팅 플레이트)  [신규]
+│   └── *.stl                 배터리·LED 홀더 등 액세서리
+├── Parts/                  3D 기구 설계 — Jetson Nano 판               [상속]
+│                             urdf/ 가 이쪽을 참조합니다. 본 팀은 안 씁니다
+├── STEP_Files/             위 파트의 CAD 원본                          [상속]
 ├── Images/                 upstream 데모 — Road-Balance 팀 로봇        [상속]
 ├── LICENSE                 GPL-3.0
 └── NOTICE                  출처·라이선스 상세
 ```
 
+> **3D 파트가 두 벌입니다. 무엇을 출력할지 헷갈리는 지점입니다.**
+>
+> | | `Parts/` | `STL/files/` |
+> |---|---|---|
+> | 구성 | Jetson Nano 판 | KDY0523 원본 판 |
+> | `urdf/` 가 보는 곳 | **여기** | — |
+> | 본 팀이 출력한 것 | — | **여기** |
+> | 몸통 | 통짜 (`mainbody` 240mm) | 판 조립 (끝판 + 측면판 + 커버 4장) |
+>
+> 다리는 대응하는 부품이 있으나 이름이 다릅니다. `Parts/larm` = `STL/files/L_arm`,
+> `Parts/lfoot` = `STL/files/L_wrist` 이며 둘 다 길이가 같습니다. **`Parts/lfoot`
+> 은 발이 아니라 하퇴 전체입니다.** 본 팀은 Raspberry Pi 4B 를 쓰므로 KDY 판을
+> 출력했고, `STL/files/foot.stl` 은 TPU 가 필요해 출력하지 않고 미끄럼 방지 패드
+> 3mm 로 대신했습니다. 실측 `l4=135` 가 그 값입니다.
+>
 > **`Images/` 의 GIF 는 본 팀 로봇이 아닙니다.** upstream 데모이며, 본 팀이
 > 촬영한 미디어는 `docs/media/` 에 있습니다.
 >

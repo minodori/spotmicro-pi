@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+<defs><marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a5a62"/></marker><marker id="al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4aa3ff"/></marker></defs>
+<rect width="1920" height="1080" fill="#0d0d10"/>
+<text x="430" y="150" font-family="Noto Sans CJK KR, sans-serif" font-size="52" fill="#5a5a62" font-weight="700" text-anchor="middle" opacity="1.0">이전</text>
+<text x="430" y="205" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">세 곳에 따로 적혀 있었다</text>
+<text x="430" y="252" font-family="Noto Sans CJK KR, sans-serif" font-size="26" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="0.75">몸통 · 대퇴 · 하퇴</text>
+<rect x="180" y="320" width="500" height="110" rx="10" fill="#2a2a30" stroke="#5a5a62" stroke-width="2"/>
+<text x="430" y="365" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#5a5a62" font-weight="600" text-anchor="middle" opacity="1.0">URDF</text>
+<text x="430" y="405" font-family="Noto Sans Mono CJK KR, monospace" font-size="30" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">186 · 120.4 · 135</text>
+<rect x="180" y="470" width="500" height="110" rx="10" fill="#2a2a30" stroke="#5a5a62" stroke-width="2"/>
+<text x="430" y="515" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#5a5a62" font-weight="600" text-anchor="middle" opacity="1.0">발끝 목표</text>
+<text x="430" y="555" font-family="Noto Sans Mono CJK KR, monospace" font-size="30" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">140 · — · —</text>
+<rect x="180" y="620" width="500" height="110" rx="10" fill="#2a2a30" stroke="#5a5a62" stroke-width="2"/>
+<text x="430" y="665" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#5a5a62" font-weight="600" text-anchor="middle" opacity="1.0">역기구학</text>
+<text x="430" y="705" font-family="Noto Sans Mono CJK KR, monospace" font-size="30" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">140 · 100 · 100</text>
+<text x="430" y="850" font-family="Noto Sans CJK KR, sans-serif" font-size="30" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">서로 이어져 있지 않다</text>
+<text x="430" y="898" font-family="Noto Sans CJK KR, sans-serif" font-size="30" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">한 곳만 고치면 나머지는 그대로</text>
+<line x1="960" y1="120" x2="960" y2="960" stroke="#26262e" stroke-width="2"/>
+<text x="1440" y="150" font-family="Noto Sans CJK KR, sans-serif" font-size="52" fill="#ffffff" font-weight="700" text-anchor="middle" opacity="1.0">지금</text>
+<text x="1440" y="205" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#4aa3ff" font-weight="500" text-anchor="middle" opacity="1.0">한 곳에서 갈라진다</text>
+<rect x="1160" y="280" width="560" height="120" rx="10" fill="#12243a" stroke="#4aa3ff" stroke-width="4"/>
+<text x="1440" y="328" font-family="Noto Sans CJK KR, sans-serif" font-size="42" fill="#ffffff" font-weight="700" text-anchor="middle" opacity="1.0">실측값 한 곳</text>
+<text x="1440" y="372" font-family="Noto Sans Mono CJK KR, monospace" font-size="26" fill="#4aa3ff" font-weight="500" text-anchor="middle" opacity="1.0">Kinematics/kinematics.py</text>
+<path d="M 1440,400 L 1440,470" fill="none" stroke="#4aa3ff" stroke-width="4"/>
+<path d="M 1240,470 L 1640,470" fill="none" stroke="#4aa3ff" stroke-width="4"/>
+<path d="M 1240,470 L 1240,530" fill="none" stroke="#4aa3ff" stroke-width="4" marker-end="url(#al)"/>
+<path d="M 1640,470 L 1640,530" fill="none" stroke="#4aa3ff" stroke-width="4" marker-end="url(#al)"/>
+<rect x="1060" y="545" width="360" height="105" rx="10" fill="none" stroke="#ffffff" stroke-width="3"/>
+<text x="1240" y="590" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#ffffff" font-weight="600" text-anchor="middle" opacity="1.0">역기구학</text>
+<text x="1240" y="628" font-family="Noto Sans CJK KR, sans-serif" font-size="26" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">실물 제어</text>
+<rect x="1460" y="545" width="360" height="105" rx="10" fill="none" stroke="#ffffff" stroke-width="3"/>
+<text x="1640" y="585" font-family="Noto Sans CJK KR, sans-serif" font-size="32" fill="#ffffff" font-weight="600" text-anchor="middle" opacity="1.0">시뮬레이션 모델</text>
+<text x="1640" y="623" font-family="Noto Sans CJK KR, sans-serif" font-size="26" fill="#5a5a62" font-weight="500" text-anchor="middle" opacity="1.0">자동 생성</text>
+<path d="M 1640,650 L 1640,720" fill="none" stroke="#3ecf8e" stroke-width="4" marker-end="url(#al)"/>
+<rect x="1460" y="735" width="360" height="105" rx="10" fill="#0f2a20" stroke="#3ecf8e" stroke-width="4"/>
+<text x="1640" y="780" font-family="Noto Sans CJK KR, sans-serif" font-size="34" fill="#3ecf8e" font-weight="700" text-anchor="middle" opacity="1.0">검증 8항목</text>
+<text x="1640" y="818" font-family="Noto Sans Mono CJK KR, monospace" font-size="26" fill="#3ecf8e" font-weight="500" text-anchor="middle" opacity="1.0">기하 0.0000 mm</text>
+<text x="1440" y="900" font-family="Noto Sans CJK KR, sans-serif" font-size="32" fill="#ffffff" font-weight="500" text-anchor="middle" opacity="1.0">사람이 옮겨 적는 단계가 없다</text>
+</svg>

@@ -42,6 +42,12 @@ This product includes work developed by third parties.
     이곳에서 작성된 것처럼 표시됩니다. 실제 저작은 위 계보와 3장의 경계 표에
     따릅니다. 원 커밋 이력은 각 upstream 저장소에서 확인할 수 있습니다.
 
+  ※ 제출 시점에도 같은 일이 일어납니다. 본 팀의 개발 커밋 319개는
+    https://github.com/minodori/SpotMicroJetson 에 있고, 그 저장소와 이곳은 조상이
+    달라 트리를 통째로 옮기는 커밋 하나로 반영됩니다. 따라서 이곳의 `git log` 로는
+    11주의 작업이 보이지 않습니다. 커밋 이력은 위 주소에서, 각 판단의 근거와 그것을
+    뒤집은 기록은 이 트리의 `docs/결정.md` 에서 확인하실 수 있습니다.
+
   upstream 원본 README: ./docs/UPSTREAM_README.md
 
 --------------------------------------------------------------------------------

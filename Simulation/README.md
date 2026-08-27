@@ -3,7 +3,7 @@
 이 디렉터리는 **업스트림에서 받은 PyBullet 시뮬레이션**입니다. 현재 쓰지 않습니다.
 지금 쓰는 시뮬레이션은 [`rl/`](../rl/) 의 MuJoCo 모델입니다.
 
-## 여기 숫자는 낡았습니다. 그것을 보여주려고 남깁니다
+## 이 디렉터리의 상수는 실물과 다릅니다
 
 한 저장소 안에 서로 다른 로봇이 세 벌 들어 있었습니다.
 
@@ -37,7 +37,7 @@ PyBullet 이 화면에 띄우고 중력과 충돌을 계산하는 몸은 다리�
 
 | | |
 |---|---|
-| `kinematics.py`, `kinematicMotion.py` | `Kinematics/` 의 낡은 사본. `kinematicMotion.py` 는 PyBullet 의존이 섞여 있어 단순 중복은 아닙니다 |
+| `kinematics.py`, `kinematicMotion.py` | `Kinematics/` 의 이전 사본. `kinematicMotion.py` 는 PyBullet 의존이 섞여 있어 단순 중복은 아닙니다 |
 | `spotmicroai.py` | PyBullet 로봇 래퍼. `RaspberryPi/` 의 동명 파일은 PyBullet 을 걷어낸 별개 판입니다 |
 | `pybullet_automatic_gait.py` | 실행 진입점 |
 | `gym_spotmicroai/` | gym 환경 골격. `step()` 이 `stepSimulation()` 만 부르고 관측·행동 공간이 없어 학습에 쓸 수 없습니다 |

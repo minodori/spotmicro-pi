@@ -119,11 +119,11 @@ SpotMicro의 모든 구조 파트는 FDM 3D 프린터로 출력한다. 구동부
 
 ### 3.3 JX CLS6336HV
 
-![JX CLS6336HV 외관](images/CLS6336HV .jpg)
+![JX CLS6336HV 외관](images/CLS6336HV.jpg)
 
-![JX CLS6336HV 스펙](images/CLS6336HV _specs.jpg)
+![JX CLS6336HV 스펙](images/CLS6336HV_specs.jpg)
 
-![JX CLS6336HV 도면](images/CLS6336HV _drawings.jpg)
+![JX CLS6336HV 도면](images/CLS6336HV_drawings.jpg)
 
 ![JX CLS6336HV 도면 치수](images/image_511899841_14.jpg)
 

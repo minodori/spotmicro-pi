@@ -1,6 +1,7 @@
 # SpotMicro 오픈소스 4족보행 로봇의 실측 기반 보행 제어와 강화학습
 
-> **팀 KINETIQ** · 2026 오픈소스 개발자대회 출품작 (일반부문 · 자유과제)
+> 부품비 46만원으로 만든 4족보행 로봇. 실측 치수 한 곳에서 시뮬레이션 모델과
+> 실물 제어 코드를 함께 생성하고, 여덟 항목을 통과해야 학습이 시작됩니다.
 
 **부품비 46만원**의 오픈소스 하드웨어로 만든 4족보행 로봇을 **실제로 걷게 만들고**, 그 과정에서
 발견한 기존 오픈소스 모델의 치수 오류를 실측으로 바로잡아 공개합니다.
@@ -66,7 +67,7 @@ Kinematics/kinematics.py   실측 기구 상수 (단일 출처)
 ## 빠른 시작
 
 ```bash
-git clone --depth 1 https://github.com/robertchoi/oss_spotmicro.git
+git clone --depth 1 https://github.com/minodori/spotmicro-pi.git
 cd oss_spotmicro && uv sync          # Python 3.12, GPU 불필요
 ```
 
@@ -178,8 +179,6 @@ oss_spotmicro/
 | 담당 | 경로 | 주요 내용 |
 |---|---|---|
 | minho | [`study/minho/`](study/minho/) work01~11 | 서보 선정, 조립, 전원 재설계, PCA9685 핀맵, **실측 기반 기구학 정정**, 4B 전환 |
-| iru-han | [`study/iru-han/`](study/iru-han/) week01~12 | 기구학, 트로팅 보행, **물리엔진 벤치마크**, MuJoCo 환경 |
-| robert | [`study/robert/`](study/robert/) week01~10 | 기구학·보행 실습, **MuJoCo/SB3 학습 파이프라인**, uv 프로젝트 구성 |
 
 ---
 

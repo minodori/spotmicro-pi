@@ -29,7 +29,7 @@ Docs/*.docx
 Docs/*.pdf
 Docs/.~lock.*
 
-# 영상 컷은 GitHub 이슈에 올리고 URL 만 문서에 남긴다 (결정.md CB-1)
+# 영상 컷은 GitHub 이슈에 올리고 URL 만 문서에 남긴다
 docs/media/*.mp4
 
 # 텔레그램 토큰·오프셋은 실행 환경에 속한다
@@ -38,12 +38,9 @@ docs/build/
 Docs/
 
 # 대회 작업 문서. 로컬에는 남기고 저장소에는 올리지 않는다.
-# 남기는 것은 docs/결정.md(판단 기록), docs/UPSTREAM_README.md(귀속),
-# docs/업무분장.md(코드 주석이 참조), docs/media/ 의 README 다.
+# 남기는 것은 docs/UPSTREAM_README.md(귀속)와 docs/media/ 의 README 다.
 docs/*.md
-!docs/결정.md
 !docs/UPSTREAM_README.md
-!docs/업무분장.md
 docs/archive/
 
 # 보고서 생산 도구. 제출물이 아니라 원고를 만드는 비계다.

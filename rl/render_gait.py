@@ -22,36 +22,73 @@ from rl.model_api import MJCF_SCENE, JOINT_ORDER, jointSigns  # noqa: E402
 LEGS = ('FL', 'FR', 'RL', 'RR')
 
 
-def render(out, seconds, fps, imgW, imgH, camera, measure=False, **params):
+def setup(**params):
+    """모델을 읽고 보행 생성기를 초기 자세에 세운다. render 와 view 가 같이 쓴다."""
     model = mujoco.MjModel.from_xml_path(MJCF_SCENE)
     data = mujoco.MjData(model)
-    renderer = None if measure else mujoco.Renderer(model, height=imgH, width=imgW)
-    track = []
 
     kb = dict(defaultParams(), IDstepWidth=0.0, IDstepAlpha=0.0)
     kb.update(params)
     kin, gait = Kinematic(), TrottingGait()
     gait.Sh = kb['Sh']
-    signs = jointSigns()
 
-    qadr = [model.jnt_qposadr[mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_JOINT, n)] for n in JOINT_ORDER]
     aid = [mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, n) for n in JOINT_ORDER]
-
     mujoco.mj_resetData(model, data)
     data.qpos[2] = 0.27
+    return model, data, kin, gait, kb, jointSigns(), aid
+
+
+def jointTargets(kin, gait, kb, signs, t):
+    """시각 t 에서 관절 12개의 목표 각도. 못 풀면 None."""
+    gait.t1, gait.t3 = gaitPhases(kb)
+    th = np.asarray(kin.calcIK(gait.positions(t, kb), (0, 0, 0),
+                               (50, 40 + kb['height'], 0)), dtype=float)
+    # calcIK 는 (4,3) theta 를 준다. JOINT_ORDER 는 다리마다 (shoulder, leg, foot).
+    target = signs * np.array([th[LEGS.index(n.split('_')[0])][
+        ('shoulder', 'leg', 'foot').index(n.split('_')[1])] for n in JOINT_ORDER])
+    return None if np.isnan(target).any() else target
+
+
+def view(**params):
+    """뷰어를 띄워 규칙 기반 보행을 실시간으로 재생한다.
+
+    파일로 뽑지 않고 눈으로 보면서 카메라를 돌리거나 멈춰 볼 때 쓴다. 창을 닫으면
+    끝난다. 실시간에 맞추려고 매 스텝 sleep 하므로 --measure 대신 쓰면 안 된다.
+    """
+    import time
+    import mujoco.viewer
+
+    model, data, kin, gait, kb, signs, aid = setup(**params)
+    step = model.opt.timestep
+    print(f"  보폭 {kb['IDstepLength']:+.0f}mm · 주기 {kb['Tt']:.0f}ms · "
+          f"높이 {kb['height']:.0f}mm.  창을 닫으면 끝납니다.")
+
+    with mujoco.viewer.launch_passive(model, data) as v:
+        t0 = time.time()
+        while v.is_running():
+            t = data.time
+            target = jointTargets(kin, gait, kb, signs, t)
+            if target is not None:
+                for k, a in enumerate(aid):
+                    data.ctrl[a] = target[k]
+            mujoco.mj_step(model, data)
+            v.sync()
+            lag = t0 + data.time - time.time()
+            if lag > 0:
+                time.sleep(lag)
+
+
+def render(out, seconds, fps, imgW, imgH, camera, measure=False, **params):
+    model, data, kin, gait, kb, signs, aid = setup(**params)
+    renderer = None if measure else mujoco.Renderer(model, height=imgH, width=imgW)
+    track = []
 
     frames, nextFrame = [], 0.0
     step = model.opt.timestep
     for i in range(int(seconds / step)):
         t = i * step
-        gait.t1, gait.t3 = gaitPhases(kb)
-        Lp = gait.positions(t, kb)
-        th = np.asarray(kin.calcIK(Lp, (0, 0, 0), (50, 40 + kb['height'], 0)), dtype=float)
-        # calcIK 는 (4,3) theta 를 준다. JOINT_ORDER 는 다리마다 (shoulder, leg, foot).
-        target = signs * np.array([th[LEGS.index(n.split('_')[0])][
-            ('shoulder', 'leg', 'foot').index(n.split('_')[1])] for n in JOINT_ORDER])
-        if np.isnan(target).any():
+        target = jointTargets(kin, gait, kb, signs, t)
+        if target is None:
             continue
         for k, a in enumerate(aid):
             data.ctrl[a] = target[k]
@@ -106,9 +143,15 @@ if __name__ == '__main__':
                    help='피치 트림 mm. 양수가 앞으로 숙임 (웹 UI 와 같은 부호)')
     p.add_argument('--measure', action='store_true',
                    help='영상 대신 수치만. 시뮬 동역학이 실물을 재현하는지 본다')
+    p.add_argument('--view', action='store_true',
+                   help='파일로 뽑지 않고 뷰어에서 실시간으로 본다')
     a = p.parse_args()
     kw = dict(Tt=a.Tt, duty=a.duty, Sh=a.Sh, height=a.hmm, IDstepLength=a.Sl,
               IDtrim=[a.pitch, a.pitch, -a.pitch, -a.pitch])
+
+    if a.view:
+        view(**kw)
+        raise SystemExit(0)
 
     if a.measure:
         r = render(a.out, max(a.seconds, 12.0), a.fps, a.imgwidth, a.imgheight,

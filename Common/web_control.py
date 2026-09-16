@@ -8,6 +8,7 @@
 표준 라이브러리만 사용하므로 로봇에 추가 패키지가 필요 없다.
 """
 import json
+import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -118,6 +119,14 @@ button:active{background:#4a5261}
  <div class="d" id="swd">탭 = 0 부터</div>
 </div>
 
+<h2>전원</h2>
+<div class="bar">
+ <button class="stop" id="pwrBtn" onclick="togglePower()">서보 끄기</button>
+ <button class="stop" onclick="piShutdown()">Pi 끄기</button>
+</div>
+<div class="hint2">서보 끄기: 명령 전송만 멈춘다 (이 페이지는 계속 켜져 있다). Pi 끄기:
+ 라즈베리파이 전체 종료 - 다시 켜려면 전원을 뽑았다 꽂아야 한다.</div>
+
 <script>
 const L=["FL","FR","RL","RR"];
 // 슬라이더 -> 표시 소수 자릿수. 범위와 step 은 서버가 /state 로 내려준다.
@@ -156,6 +165,15 @@ setInterval(()=>{
 },100);
 
 const cmd=b=>{ if(b&&b.stop) swStop(); return post(b); };
+function togglePower(){
+ const active = !lastState || lastState.ServoActive!==false;
+ if(active && !confirm("서보 명령을 멈춥니다. 로봇이 지금 자세로 멈춥니다. 계속?")) return;
+ post({active: !active});
+}
+function piShutdown(){
+ if(!confirm("라즈베리파이 전원을 끕니다. 다시 켜려면 전원을 뽑았다 꽂아야 합니다. 계속?")) return;
+ post({poweroff:1});
+}
 const leg=(n,d)=>post({leg:n,delta:d});
 const step=k=>{ if(k==="w"||k==="s") swStart(); return post({key:k}); };
 
@@ -181,6 +199,7 @@ function draw(s){
  document.getElementById("sw").textContent=(s.IDstepWidth*2).toFixed(0);
  document.getElementById("sa").textContent=s.IDstepAlpha.toFixed(0);
  document.getElementById("mode").textContent=s.StartStepping?"보행중":"정지";
+ document.getElementById("pwrBtn").textContent=s.ServoActive===false?"서보 켜기":"서보 끄기";
  lastState=s;
  if(!s.StartStepping) swStop();   // 로봇이 멈추면 시계도 멈춘다 (space, 넘어짐 등)
  for(const k in SLIDERS){
@@ -275,6 +294,12 @@ def startWebControl(keyInputs, port=8080):
             elif req.get('stop'):
                 keyInputs.resetStatus()
                 keyInputs.calcRbStep()
+            elif 'active' in req:
+                keyInputs.setActive(req['active'])
+            elif req.get('poweroff'):
+                # 응답을 먼저 내보낸 뒤 끈다. Pi 전체가 내려가므로 프로세스도
+                # 같이 죽는다 - 이후 systemd 재시작은 없다 (poweroff).
+                threading.Timer(0.5, subprocess.run, args=(['sudo', 'systemctl', 'poweroff'],)).start()
             self._send(json.dumps(state()), "application/json")
 
     try:

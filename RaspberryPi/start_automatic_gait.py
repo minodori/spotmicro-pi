@@ -203,8 +203,12 @@ def main(id, command_status, keyInputs=None):
                         (trotting.t1 + trotting.t3) / 1000.0) if (
                             walking and len(jointAngles) and not ikFail) else 0.0
 
+        # 서보 출력 자체를 끌 수 있다 (웹 UI "서보 끄기"). 프로세스는 안 죽으므로
+        # 웹서버는 계속 응답하고, 마지막으로 보낸 자세에 그대로 멈춘다.
+        active = result_dict.get('ServoActive', True)
+
         # First Step doesn't contains jointAngles
-        if len(jointAngles) and not ikFail:
+        if len(jointAngles) and not ikFail and active:
             # Real Actuators
             blocked = controller.servoRotate(jointAngles) or []
 
@@ -256,6 +260,8 @@ def main(id, command_status, keyInputs=None):
         print(f" 무릎슬루 {slew:.0f}도/s (실측, 정격 {SERVO_RATED_SLEW:.0f}){slewWarn}"
               f"      전진속도 {speed:.0f}mm/s (이론, 미끄러짐 0 가정)")
         print(" y/h 앞뒤기울기   u/j 좌우기울기   p 트림리셋   space 정지   Ctrl-C 종료")
+        if not active:
+            print(" !! 서보 꺼짐 (웹에서 끔) - 마지막 자세로 정지. 웹에서 다시 켜라")
         if ikFail:
             print(" !! IK 도달 불가 - 서보 명령 중단. 몸통을 낮추거나(g) 보폭을 줄여라")
         elif blocked:

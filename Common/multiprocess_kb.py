@@ -34,7 +34,7 @@ def keyboardAvailable():
 # Dictionary of keyboard controller buttons we want to include.
 key_value_default = {'w': 0, 'a': 0, 's': 0, 'd': 0, 'q': 0, 'e': 0, 'move': False }
 control_offset = {'IDstepLength': 0.0, 'IDstepWidth': 0.0, 'IDstepAlpha': 0.0, 'StartStepping': False,
-                  'IDtrim': [0.0, 0.0, 0.0, 0.0]}
+                  'IDtrim': [0.0, 0.0, 0.0, 0.0], 'ServoActive': True}
 
 # 다리별 발끝 y 트림 (mm). 조립 오차로 다리 유효 길이가 다른 것을 보정한다.
 # 양수 = 발끝을 몸통 쪽으로 = 다리를 짧게 = 스윙 중 지면 여유 증가.
@@ -179,6 +179,12 @@ class KeyInterrupt():
         cur = d.get(name, DEFAULTS[name][0])
         self.command_status.put(d)
         return self.setParam(name, cur + delta)
+
+    def setActive(self, value):
+        """서보 출력을 켜고 끈다. 프로세스(=웹서버)는 그대로 두고 출력만 멈춘다."""
+        d = self.command_status.get()
+        d['ServoActive'] = bool(value)
+        self.command_status.put(d)
 
     def snapshot(self):
         """현재 상태를 읽기만 한다 (큐를 비우지 않도록 즉시 되돌린다)."""

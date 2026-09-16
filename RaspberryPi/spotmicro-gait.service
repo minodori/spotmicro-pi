@@ -1,0 +1,33 @@
+# 설치 (Pi 에서 한 번만):
+#   sudo cp RaspberryPi/spotmicro-gait.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now spotmicro-gait
+#
+# 종료:   sudo systemctl stop spotmicro-gait
+# 재시작: sudo systemctl restart spotmicro-gait
+# 자동시작 해제: sudo systemctl disable spotmicro-gait
+# 로그:   journalctl -u spotmicro-gait -f
+#
+# ExecStart 의 uv 경로가 다르면 Pi 에서 `which uv` 로 확인해 바꾼다.
+# (systemd 는 로그인 셸의 PATH 를 안 물려받아 상대경로 uv 를 못 찾는다.)
+#
+# WorkingDirectory 를 저장소 루트가 아니라 RaspberryPi/ 로 둔다.
+# start_automatic_gait.py 안의 sys.path.append("..") 가 cwd 기준 상대경로라,
+# 루트에서 실행하면 그 ".."가 저장소 밖으로 나가 Kinematics 를 못 찾는다
+# (ModuleNotFoundError). 저장소 루트에서 uv 프로젝트(pyproject.toml)는
+# 상위 디렉터리를 검색해서 그대로 찾으므로 uv 동작에는 지장 없다.
+
+[Unit]
+Description=SpotMicro automatic gait (boot start, phone web control)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=minodori
+WorkingDirectory=/home/minodori/Projects/SpotMicroJetson/RaspberryPi
+ExecStart=/home/minodori/.local/bin/uv run python start_automatic_gait.py
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

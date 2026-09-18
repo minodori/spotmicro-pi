@@ -243,7 +243,7 @@ access-points:
 
 SSID 가 이미 대역을 특정하므로 `band` 줄을 지우니 바로 붙었다.
 
-### 7.2 노트북 WiFi 절전
+### 7.2 노트북 WiFi 절전 - 프로필마다 따로 걸린다
 
 ping 이 1.7ms 와 117ms 를 오가고 손실 12.5% 가 났다. 같은 기기에 유선/무선 두 경로로
 재어 구간을 갈랐다.
@@ -255,13 +255,48 @@ ping 이 1.7ms 와 117ms 를 오가고 손실 12.5% 가 났다. 같은 기기에
 
 노트북(MediaTek MT7925)의 WiFi 절전이었다. work11.md §6.23 과 같은 원인이다.
 
+**함정은 NetworkManager 가 절전 설정을 연결 프로필마다 따로 관리한다는 것이다.**
+
 ```bash
-nmcli con mod <연결이름> 802-11-wireless.powersave 2
-nmcli con up <연결이름>
+nmcli con mod 5168ap 802-11-wireless.powersave 2    # 이 WiFi 에만 적용된다
 ```
 
-손실은 0% 가 됐지만 지연 편차는 남았다. 다른 기기(폰 5~7ms, CM4 4.9ms)는 안정적이므로
-AP 가 아니라 이 칩의 드라이버 문제로 보인다. 미해결.
+집 WiFi 에만 걸어 두었더니 다른 장소의 WiFi 에 붙을 때마다 절전이 되살아났다.
+프로필 목록을 보면 명확하다.
+
+```
+5168ap          disable
+mesh5168        disable
+Z_studycafe     default     <- 나머지 전부 기본값
+AIE_509_5G      default
+...
+```
+
+전역 기본값으로 두어야 새로 붙는 WiFi 에도 자동 적용된다.
+
+`/etc/NetworkManager/conf.d/wifi-powersave.conf`:
+
+```ini
+[connection]
+wifi.powersave = 2
+```
+
+```bash
+sudo systemctl reload NetworkManager
+```
+
+**결과**:
+
+| 시점 | 평균 | 최대 | 손실 |
+|---|---:|---:|---:|
+| 절전 켜짐 | 144ms | 414ms | 12.5% |
+| 프로필만 해제 (다른 WiFi) | 3.5ms | 21ms | 0% |
+| 전역 해제 | 3.3ms | 6.5ms | 0% |
+
+40회 중 10ms 를 넘는 값이 하나도 없다.
+
+> ASPM(`mt7925e` 의 `disable_aspm=1`)도 후보로 보았으나 건드릴 필요가 없었다.
+> PCIe 전력 관리는 WiFi 절전과 다른 층이므로, 절전을 껐는데도 남으면 그때 볼 것.
 
 > **판별법** (work11.md §6.23): 지연이 일정 폭으로 늘다 뚝 떨어지는 톱니면 절전이다.
 > 불규칙하게 튀면 간섭이나 드라이버다.
@@ -280,7 +315,13 @@ ip link show tailscale0
 
 # 무선 절전 확인
 iw dev wlan0 get power_save
-nmcli -g 802-11-wireless.powersave con show <연결이름>
+cat /etc/NetworkManager/conf.d/wifi-powersave.conf      # 전역
+nmcli -g 802-11-wireless.powersave con show <연결이름>  # 프로필별
+
+# 프로필 전체 훑기 (빠진 것 찾기)
+for c in $(nmcli -t -f NAME,TYPE con show | grep wireless | cut -d: -f1); do
+    printf "%-20s %s\n" "$c" "$(nmcli -g 802-11-wireless.powersave con show "$c")"
+done
 
 # 구간 분리 측정 (유선/무선 주소를 다 가진 기기로)
 ping -c 10 192.168.88.3    # 유선

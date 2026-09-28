@@ -4,7 +4,6 @@ sys.path.append("..")
 import Kinematics.kinematics as kn
 import numpy as np
 from Common.servo_map import SERVO_OFFSETS
-from Common.servo_oe import OutputEnable, configurePCA
 from adafruit_servokit import ServoKit
 import board
 import busio
@@ -31,17 +30,6 @@ class Controllers:
             6: (self._kit2, 13), 7: (self._kit2, 14), 8: (self._kit2, 15),  # RL -> 0x41 CH13~15 (좌측 끝단)
             9: (self._kit, 0),   10: (self._kit, 1),  11: (self._kit, 2),   # RR -> 0x40 CH0~2   (우측 반전 -> 앞단이 뒤쪽)
         }
-
-        # OE(Output Enable)로 실제 릴리즈가 가능하도록 설정한다.
-        # 이 로봇의 DS 계열 서보는 펄스를 끊어도(신호선 LOW) 마지막 목표값을 유지한다.
-        # 신호선이 "뜬 상태" 여야만 힘이 빠지고, OUTNE=10 + OE HIGH 가 그 상태를 만든다.
-        # 배선이 없거나 gpiod 가 없으면 조용히 무시되고 기존 동작 그대로다.
-        for kit_obj in (self._kit, self._kit2):
-            configurePCA(kit_obj._pca)
-        self._oe = OutputEnable()
-        self._oe.enable(True)
-        if self._oe.available:
-            print("OE 제어 활성 - 프로그램이 끝나면 서보가 자동 릴리즈된다")
 
         # DS3230 / DS3235 pulse width spec: 500-2500usec
         # 기본값(750-2250)으로 남는 채널이 없도록 실제 사용하는 채널 전부에 적용한다.
@@ -153,13 +141,13 @@ class Controllers:
         목표 각도를 물고 stall 전류를 먹는다. 테스트를 마쳤으면 풀어둘 것.
         angle = None 은 duty_cycle 을 0 으로 만들어 펄스 자체를 멈춘다.
 
+        이 로봇의 DS 계열 서보는 펄스를 끊어도(신호선 LOW) 마지막 목표값을
+        유지하므로 실제로 힘이 빠지지는 않는다.
+
         지면에 서 있는 상태에서 호출하면 그대로 주저앉는다.
         """
         for kit_obj, ch in self._channel_map.values():
             kit_obj.servo[ch].angle = None
-        # 펄스만 끊으면 DS 계열은 마지막 목표값을 유지한다. OE 로 신호선을 놓아야
-        # 실제로 힘이 빠진다.
-        self._oe.release()
 
 
 if __name__=="__main__":

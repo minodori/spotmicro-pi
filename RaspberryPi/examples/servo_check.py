@@ -34,7 +34,6 @@ from adafruit_servokit import ServoKit
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from Common.servo_map import SERVO_OFFSETS
-from Common.servo_oe import OutputEnable, configurePCA
 
 i2c = busio.I2C(board.SCL, board.SDA)
 kit = ServoKit(channels=16, i2c=i2c, address=0x40)   # 배터리 우측 보드 -> 오른쪽 다리
@@ -44,24 +43,6 @@ kit2 = ServoKit(channels=16, i2c=i2c, address=0x41)  # 배터리 좌측 보드 -
 for ch in range(16):
     kit.servo[ch].set_pulse_width_range(500, 2500)
     kit2.servo[ch].set_pulse_width_range(500, 2500)
-
-# OE 를 고임피던스 방식으로 설정하고 라인을 잡는다. 배선이 안 되어 있거나
-# gpiod 가 없으면 조용히 무시되고 기존 동작 그대로다.
-for _k in (kit, kit2):
-    configurePCA(_k._pca)
-OE = OutputEnable()
-OE.enable(True)
-
-
-def holdUntilEnter(msg="Enter 를 누르면 릴리즈하고 종료"):
-    """OE 페일세이프 배선에서는 프로세스가 끝나면 서보가 풀린다.
-    각도를 세팅하고 혼을 끼우는 작업은 그동안 자세를 붙들고 있어야 한다."""
-    if not OE.available:
-        return          # 배선 전이면 서보가 알아서 유지하므로 기다릴 필요 없다
-    try:
-        input(f"  {msg} ")
-    except (EOFError, KeyboardInterrupt):
-        print()
 
 # index -> (kit, 보드 채널). servo_controller.py 와 동기화 유지할 것.
 # 배선이 짧아지는 헤더를 고른 결과.
@@ -325,7 +306,6 @@ def home(force=False):
         kit_obj.servo[ch].angle = target
         print(f"  idx {i:>2}  {NAMES[i]:<12} -> {target:>3}도")
         time.sleep(0.15)  # 12개 동시 기동 시 돌입 전류가 몰리는 것을 피한다
-    holdUntilEnter()
     print("\n완료.")
     if skipped:
         print(f"  {len(skipped)}개를 건너뛰었다: {[NAMES[i] for i in skipped]}")
@@ -348,13 +328,9 @@ def release(only=None):
         kit_obj, ch = CHANNEL_MAP[i]
         kit_obj.servo[ch].angle = None
         print(f"  idx {i:>2}  {NAMES[i]:<12} ({ADDR[id(kit_obj)]} CH{ch}) 펄스 정지")
-    if OE.available and only is None:
-        OE.release()
-        print("\n  OE 고임피던스 - 신호선을 놓았다. 실제로 힘이 빠진다.")
-    elif not OE.available:
-        print(f"\n  주의: OE 제어 불가 ({OE.reason or 'OE 배선 없음'}).")
-        print("  이 로봇의 DS 계열 서보는 펄스를 끊어도(LOW) 마지막 목표값을 유지한다.")
-        print("  실제 릴리즈에는 OE 배선이 필요하다. Common/servo_oe.py 참고.")
+    if only is None:
+        print("\n  주의: 이 로봇의 DS 계열 서보는 펄스를 끊어도(LOW) 마지막 목표값을 유지한다.")
+        print("  즉 실제로는 힘이 빠지지 않는다.")
     print("\n완료. 다시 힘을 주려면: servo_check.py home")
 
 
@@ -516,7 +492,6 @@ def main():
             return
         sv.angle = angle
         print(f"{label} -> {angle}도")
-        holdUntilEnter("혼 결합이 끝나면 Enter (그때까지 이 자세를 유지한다)")
 
 
 if __name__ == "__main__":

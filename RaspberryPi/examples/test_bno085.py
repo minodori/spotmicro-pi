@@ -8,15 +8,20 @@
 |------|-------------------|
 | VIN  | 3.3V (1 또는 17)   |
 | GND  | 아무 GND          |
-| SDA  | GPIO2 (물리핀 3)   |
-| SCL  | GPIO3 (물리핀 5)   |
-| RST  | GPIO17 (물리핀 11) - 2026-09-29 추가, 스톨 자동 복구용. |
+| SDA  | `--bus hw`: GPIO2 (물리핀 3) / `--bus sw`: GPIO23 (물리핀 16) |
+| SCL  | `--bus hw`: GPIO3 (물리핀 5) / `--bus sw`: GPIO24 (물리핀 18) |
+| RST  | GPIO17 (물리핀 11) - hw/sw 공통, 스톨 자동 복구용. |
 |      | 한때 Common/servo_oe.py 의 PCA9685 OE 핀과 겹쳐서(spotmicro-gait.service |
 |      | 가 상시 점유) GPIO27 로 옮겼었으나, OE 기능 자체를 제거하면서 GPIO17 로 |
 |      | 되돌렸다 - servo_oe.py 는 더 이상 이 저장소에 없다. |
 
+VIN/GND/RST 는 기존 Y케이블(PCA9685 와 공유하던 것) 그대로 쓰고, SDA/SCL
+두 가닥만 hw/sw 배선 사이에서 옮겨 꽂는다 - 아래 "하드웨어/소프트웨어
+I2C 를 배선으로 골라 쓰기" 참고.
+
 I2C 주소는 0x4B (i2cdetect -y 1 실측, 2026-09-28). work14.md 작성 시점 예상은
-0x4A였으나 실측이 다르다. PCA9685의 0x40/0x41과는 겹치지 않는다.
+0x4A였으나 실측이 다르다. PCA9685의 0x40/0x41과는 겹치지 않는다(그쪽은
+`--bus` 선택과 무관하게 항상 하드웨어 I2C1 에 남아있다).
 
 축 리매핑
 ---------
@@ -120,8 +125,54 @@ RPi.GPIO 대신 gpiod(문자 장치 `/dev/gpiochipN`)를 썼는데(지금은 OE 
 `_GpiodResetPin` 이 digitalio.DigitalInOut 이 흉내내는 최소 인터페이스
 (`.direction =`, `.value =` 대입)만 gpiod 위에 얹어서, adafruit_bno08x 의
 `hard_reset()` 코드를 그대로 쓸 수 있게 한다.
+
+하드웨어 I2C -> 소프트웨어 I2C 전환 (2026-09-29)
+-------------------------------------------------
+지금까지의 패치들(손상 패킷 스킵, 버스 실패 재시도, sanity filter, 스톨
+자동 복구)은 clock stretching 문제의 증상만 흡수한다. 근본 원인은 RPi
+하드웨어 I2C 컨트롤러(BCM283x/2711)가 clock stretching 을 스펙대로 못
+받아주는 것 자체다.
+
+두 가지 가설을 실측으로 배제했다:
+  - "CM4 가 서드파티 캐리어 보드(Waveshare CM4-to-Pi4-Adapter)를 거쳐서
+    신호가 나빠졌다" - 외장 1kΩ 풀업을 SDA/SCL 에 병렬로 추가해봤지만
+    (실효 저항이 공식 CM4 보드보다도 낮아짐) 손상율/거부율에 유의미한
+    변화가 없었다.
+  - "RPi4B 로 바꾸면 나아진다" - RPi4B 도 같은 BCM2711 SoC 라 이 결함이
+    그대로 있고, 실제로 이 이슈는 RPi 모델을 가리지 않고 보고된다.
+
+남은 정공법은 하드웨어 I2C 컨트롤러 자체를 안 쓰는 것 - 커널의
+`i2c-gpio` 오버레이로 임의의 GPIO 두 개를 비트뱅잉(소프트웨어) I2C 로
+쓰면, clock stretching 대기를 커널이 SCL 라인 상태를 직접 읽어 처리하므로
+이 하드웨어 결함을 완전히 우회한다.
+
+설정 (`/boot/firmware/config.txt`, sudo 필요, 재부팅해야 적용):
+
+    dtoverlay=i2c-gpio,bus=3,i2c_gpio_sda=23,i2c_gpio_scl=24
+
+재부팅 후 `/dev/i2c-3` 가 새로 생긴다. `busio.I2C(board.SCL, board.SDA)`
+는 하드웨어 I2C1(GPIO2/3) 고정이라 이 새 버스를 못 열므로,
+`adafruit_extended_bus.ExtendedI2C(bus_id)` 로 버스 번호를 직접 지정해서
+연다. PCA9685(0x40/0x41)는 기존 하드웨어 I2C1(GPIO2/3)에 그대로 두고,
+BNO085 만 이 소프트웨어 버스로 옮겼다 - 서로 다른 버스라 부하도 분리된다.
+
+트레이드오프: 비트뱅잉이라 하드웨어 I2C보다 느리고 CPU 스케줄링에
+의존한다. 클럭 속도는 `i2c-gpio` 오버레이 파라미터
+(`i2c_gpio_delay_us`)로 조절 가능하지만 기본값을 우선 실측한다.
+
+하드웨어/소프트웨어 I2C 를 배선으로 골라 쓰기
+-----------------------------------------------
+같은 BNO085 를 두 버스에 동시에 전기적으로 연결하면 안 된다 - 하드웨어
+I2C1 컨트롤러와 소프트웨어 i2c-gpio 드라이버가 같은 SDA/SCL 라인을
+동시에 구동하려 하면 버스 경합이 나서 더 나빠진다. RST(GPIO17)/VIN/GND
+는 hw/sw 공통이라 고정 배선이고, SDA/SCL 두 가닥만 그때그때 옮겨 꽂아서
+`--bus` 로 어느 쪽을 쓸지 고른다:
+
+    python3 test_bno085.py --bus hw   # GPIO2/3, 하드웨어 I2C1 (기본값)
+    python3 test_bno085.py --bus sw   # GPIO23/24, 소프트웨어 I2C (버스 3)
 """
 
+import argparse
 import sys
 import time
 
@@ -135,8 +186,10 @@ from adafruit_bno08x import (
     BNO_REPORT_ROTATION_VECTOR,
 )
 from adafruit_bno08x.i2c import BNO08X_I2C
+from adafruit_extended_bus import ExtendedI2C
 
 I2C_ADDRESS = 0x4B
+SW_I2C_BUS_NUMBER = 3  # dtoverlay=i2c-gpio,bus=3,... 와 맞춰야 한다
 RST_CHIP = "/dev/gpiochip0"
 RST_LINE = 17  # BCM GPIO17, 물리핀 11
 PRINT_INTERVAL_S = 0.2
@@ -327,11 +380,45 @@ def _connect_with_retry(i2c, reset_pin, attempts=INIT_RETRY_ATTEMPTS, delay_s=IN
     raise last_exc
 
 
+def _parse_args():
+    parser = argparse.ArgumentParser(
+        description="BNO085 IMU I2C 연결/축 방향 확인용 진단 스크립트."
+    )
+    parser.add_argument(
+        "--bus",
+        choices=["hw", "sw"],
+        default="hw",
+        help=(
+            "hw: 하드웨어 I2C1, GPIO2/3 (기본값) / "
+            "sw: 소프트웨어 I2C, GPIO23/24 (버스 %d, i2c-gpio 오버레이 필요)"
+        )
+        % SW_I2C_BUS_NUMBER,
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = _parse_args()
     _patch_skip_corrupt_packets()
     _patch_hard_reset_settle_time()
 
-    i2c = busio.I2C(board.SCL, board.SDA, frequency=400_000)
+    if args.bus == "sw":
+        i2c = ExtendedI2C(SW_I2C_BUS_NUMBER)
+        wiring_hint = (
+            f"SDA(GPIO23/핀16), SCL(GPIO24/핀18) 배선과 "
+            f"dtoverlay=i2c-gpio,bus={SW_I2C_BUS_NUMBER},"
+            f"i2c_gpio_sda=23,i2c_gpio_scl=24 설정(재부팅 필요)을 확인할 것.\n"
+            f"i2cdetect -y {SW_I2C_BUS_NUMBER} 로 주소가 잡히는지도 확인 가능."
+        )
+        print(f"소프트웨어 I2C 사용 (버스 {SW_I2C_BUS_NUMBER}, GPIO23/24).")
+    else:
+        i2c = busio.I2C(board.SCL, board.SDA, frequency=400_000)
+        wiring_hint = (
+            "SDA(GPIO2/핀3), SCL(GPIO3/핀5) 배선을 확인할 것.\n"
+            "i2cdetect -y 1 로 주소가 실제로 잡히는지도 별도 터미널에서 확인 가능."
+        )
+        print("하드웨어 I2C1 사용 (GPIO2/3).")
+
     reset_pin = _GpiodResetPin(RST_CHIP, RST_LINE)
 
     try:
@@ -339,9 +426,8 @@ def main():
     except Exception as exc:
         print(
             f"BNO085 연결 실패 (주소 0x{I2C_ADDRESS:02X}): {exc}\n"
-            "SDA(GPIO2/핀3), SCL(GPIO3/핀5), VIN(3.3V), GND, "
-            "RST(GPIO17/핀11) 배선을 확인할 것.\n"
-            "i2cdetect -y 1 로 주소가 실제로 잡히는지도 별도 터미널에서 확인 가능.",
+            f"{wiring_hint}\n"
+            "VIN(3.3V), GND, RST(GPIO17/핀11) 배선도 같이 확인할 것.",
             file=sys.stderr,
         )
         raise

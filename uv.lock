@@ -157,6 +157,15 @@ wheels = [
 ]
 
 [[package]]
+name = "adafruit-extended-bus"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "adafruit-blinka" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d3/1c/26ccaf2d7a3fd3d16504173df591973b9f1de5520b0b4d81af038b9e4ed3/adafruit-extended-bus-1.0.2.tar.gz", hash = "sha256:f34e3c114e274e5aa475673794019af1ab438df6e45141e16201b6a8c4bea3ea", size = 18966, upload-time = "2021-06-14T15:03:48.711Z" }
+
+[[package]]
 name = "adafruit-platformdetect"
 version = "3.89.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3946,6 +3955,7 @@ robot = [
     { name = "adafruit-circuitpython-bno08x" },
     { name = "adafruit-circuitpython-pca9685" },
     { name = "adafruit-circuitpython-servokit" },
+    { name = "adafruit-extended-bus" },
     { name = "gpiod" },
     { name = "keyboard" },
     { name = "psutil" },
@@ -3957,6 +3967,7 @@ requires-dist = [
     { name = "adafruit-circuitpython-bno08x", marker = "extra == 'robot'", specifier = "==1.3.3" },
     { name = "adafruit-circuitpython-pca9685", marker = "extra == 'robot'", specifier = "==3.4.22" },
     { name = "adafruit-circuitpython-servokit", marker = "extra == 'robot'", specifier = "==1.3.24" },
+    { name = "adafruit-extended-bus", marker = "extra == 'robot'", specifier = "==1.0.2" },
     { name = "gpiod", marker = "extra == 'robot'", specifier = "==2.5.0" },
     { name = "gymnasium", specifier = "==1.3.0" },
     { name = "imageio", specifier = "==2.37.4" },
